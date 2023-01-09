@@ -8,6 +8,11 @@
 composer require saleh7/php-zatca-xml
 ```
 
+### Validation XML
+
+![Screenshot](https://i.imgur.com/0kobQtq.png)
+
+
 ### E-Invoice-specifications:
 
 https://zatca.gov.sa/en/E-Invoicing/SystemsDevelopers/Pages/E-Invoice-specifications.aspx
