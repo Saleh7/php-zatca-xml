@@ -1,0 +1,40 @@
+{
+    "name": "saleh7/php-zatca-xml",
+    "description": "this package handle the stage 2 of zatca for integration the tax and simpilified tax invoices.",
+    "keywords": [
+        "zatca",
+        "Saleh7",
+        "invoice",
+        "fatoora",
+        "ublinvoice",
+        "ubl invoice",
+        "zatca-xml",
+        "electronic invoice",
+        "digital invoice",
+        "xml",
+        "government",
+        "saudiarabia",
+        "saudi arabia",
+        "zakat and tax",
+        "xml invoice"
+    ],
+    "homepage": "https://github.com/Saleh7/php-zatca-xml",
+    "license": "MIT",
+    "require": {
+        "php": "^7.4||^8.1",
+        "sabre/xml": "^4.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Saleh7\\Zatca\\": ["src"],
+            "Saleh7\\Zatca\\Tests\\": ["tests"]
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "phpcs": "vendor/bin/phpcs -n --standard=phpcs.xml ./src/"
+    }
+}
