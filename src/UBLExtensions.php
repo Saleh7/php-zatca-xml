@@ -5,45 +5,60 @@ use InvalidArgumentException;
 use Sabre\Xml\Writer;
 use Sabre\Xml\XmlSerializable;
 
+/**
+ * Class UBLExtensions
+ *
+ * Represents a collection of UBL extensions for XML serialization.
+ */
 class UBLExtensions implements XmlSerializable
 {
-
-    private array $UBLExtensions;
+    /** @var UBLExtension[] Array of UBLExtension objects. */
+    private array $UBLExtensions = [];
 
     /**
-     * @return UBLExtension
+     * Get the UBL extensions.
+     *
+     * @return UBLExtension[]
      */
-    public function getUBLExtensions()
+    public function getUBLExtensions(): array
     {
         return $this->UBLExtensions;
     }
 
     /**
+     * Set the UBL extensions.
+     *
      * @param UBLExtension[] $UBLExtensions
-     * @return UBLExtensions
+     * @return self
      */
-    public function setUBLExtensions(array $UBLExtensions): UBLExtensions
+    public function setUBLExtensions(array $UBLExtensions): self
     {
         $this->UBLExtensions = $UBLExtensions;
         return $this;
     }
 
-    private function validator()
+    /**
+     * Validates that UBLExtensions are set.
+     *
+     * @return void
+     * @throws InvalidArgumentException if UBLExtensions are not provided.
+     */
+    private function validate(): void
     {
-        if ($this->UBLExtensions === null) {
-            throw new InvalidArgumentException("Messing UBL Extension");
+        if (empty($this->UBLExtensions)) {
+            throw new InvalidArgumentException("Missing UBL Extension(s).");
         }
     }
 
     /**
-     * The xmlSerialize method is called during xml writing.
+     * Serializes this object to XML.
      *
-     * @param Writer $writer
+     * @param Writer $writer The XML writer.
      * @return void
      */
     public function xmlSerialize(Writer $writer): void
     {
-        $this->validator();
+        $this->validate();
         foreach ($this->UBLExtensions as $UBLExtension) {
             $writer->write([
                 Schema::EXT . 'UBLExtension' => $UBLExtension

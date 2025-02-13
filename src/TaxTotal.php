@@ -3,91 +3,124 @@ namespace Saleh7\Zatca;
 
 use Sabre\Xml\Writer;
 use Sabre\Xml\XmlSerializable;
-
 use InvalidArgumentException;
 
+/**
+ * Class TaxTotal
+ *
+ * Represents the total tax details for an invoice and provides XML serialization.
+ */
 class TaxTotal implements XmlSerializable
 {
-    public $taxAmount;
-    private $roundingAmount;
-    private $taxSubTotals = [];
+    /** @var float|null Total tax amount. */
+    public ?float $taxAmount = null;
+
+    /** @var float|null Rounding amount. */
+    private ?float $roundingAmount = null;
 
     /**
-     * @param mixed $taxAmount
-     * @return TaxTotal
+     * @var TaxSubTotal[] Array of tax subtotals.
      */
-    public function setTaxAmount(?float $taxAmount): TaxTotal
+    private array $taxSubTotals = [];
+
+    /**
+     * Set the total tax amount.
+     *
+     * @param float|null $taxAmount
+     * @return self
+     * @throws InvalidArgumentException if tax amount is negative.
+     */
+    public function setTaxAmount(?float $taxAmount): self
     {
+        if ($taxAmount !== null && $taxAmount < 0) {
+            throw new InvalidArgumentException('Tax amount must be non-negative.');
+        }
         $this->taxAmount = $taxAmount;
         return $this;
     }
 
     /**
-     * @param mixed $taxAmount
-     * @return TaxTotal
+     * Set the rounding amount.
+     *
+     * @param float|null $roundingAmount
+     * @return self
+     * @throws InvalidArgumentException if rounding amount is negative.
      */
-    public function setRoundingAmount(?float $roundingAmount): TaxTotal
+    public function setRoundingAmount(?float $roundingAmount): self
     {
+        if ($roundingAmount !== null && $roundingAmount < 0) {
+            throw new InvalidArgumentException('Rounding amount must be non-negative.');
+        }
         $this->roundingAmount = $roundingAmount;
         return $this;
     }
 
     /**
+     * Adds a TaxSubTotal object to the tax subtotals array.
+     *
      * @param TaxSubTotal $taxSubTotal
-     * @return TaxTotal
+     * @return self
      */
-    public function addTaxSubTotal(TaxSubTotal $taxSubTotal): TaxTotal
+    public function addTaxSubTotal(TaxSubTotal $taxSubTotal): self
     {
         $this->taxSubTotals[] = $taxSubTotal;
         return $this;
     }
 
     /**
-     * The validate function that is called during xml writing to valid the data of the object.
+     * Validates that required fields are set.
      *
-     * @throws InvalidArgumentException An error with information about required data that is missing to write the XML
      * @return void
+     * @throws InvalidArgumentException if taxAmount is not set.
      */
-    public function validate()
+    public function validate(): void
     {
         if ($this->taxAmount === null) {
-            throw new InvalidArgumentException('Missing taxtotal taxamount');
+            throw new InvalidArgumentException('Missing TaxTotal taxAmount.');
         }
     }
 
     /**
-     * The xmlSerialize method is called during xml writing.
-     * @param Writer $writer
+     * Serializes this object to XML.
+     *
+     * @param Writer $writer The XML writer instance.
      * @return void
      */
     public function xmlSerialize(Writer $writer): void
     {
         $this->validate();
 
+        $currencyID = GeneratorInvoice::$currencyID;
+
+        // Write TaxAmount element
         $writer->write([
             [
                 'name' => Schema::CBC . 'TaxAmount',
                 'value' => number_format($this->taxAmount, 2, '.', ''),
                 'attributes' => [
-                    'currencyID' => GeneratorInvoice::$currencyID
+                    'currencyID' => $currencyID
                 ]
             ],
         ]);
+
+        // Write RoundingAmount element if set
         if ($this->roundingAmount !== null) {
             $writer->write([
                 [
                     'name' => Schema::CBC . 'RoundingAmount',
                     'value' => number_format($this->roundingAmount, 2, '.', ''),
                     'attributes' => [
-                        'currencyID' => GeneratorInvoice::$currencyID
+                        'currencyID' => $currencyID
                     ]
                 ],
             ]);
         }
 
-
+        // Write each TaxSubTotal element
         foreach ($this->taxSubTotals as $taxSubTotal) {
-            $writer->write([Schema::CAC . 'TaxSubtotal' => $taxSubTotal]);
+            $writer->write([
+                Schema::CAC . 'TaxSubtotal' => $taxSubTotal
+            ]);
         }
     }
 }

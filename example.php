@@ -1,124 +1,139 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
 
-// SignatureInformation
-$sign = (new \Saleh7\Zatca\SignatureInformation)
+use Saleh7\Zatca\{
+    SignatureInformation,UBLDocumentSignatures,ExtensionContent,UBLExtension,UBLExtensions,Signature,InvoiceType,AdditionalDocumentReference,
+    TaxScheme,PartyTaxScheme,Address,LegalEntity,Delivery,Party,PaymentMeans,TaxCategory,
+    AllowanceCharge,TaxSubTotal,TaxTotal,LegalMonetaryTotal,ClassifiedTaxCategory,Item,Price,InvoiceLine,
+    GeneratorInvoice,Invoice,UnitCode,OrderReference,BillingReference,Contract,Attachment
+};
+
+// --- Signature Information & UBL Document Signatures ---
+$signatureInfo = (new SignatureInformation)
     ->setReferencedSignatureID("urn:oasis:names:specification:ubl:signature:Invoice")
     ->setID('urn:oasis:names:specification:ubl:signature:1');
 
-// UBLDocumentSignatures
-$ublDecoment = (new \Saleh7\Zatca\UBLDocumentSignatures)
-    ->setSignatureInformation($sign);
+$ublDocSignatures = (new UBLDocumentSignatures)
+    ->setSignatureInformation($signatureInfo);
 
-$extensionContent = (new \Saleh7\Zatca\ExtensionContent)
-    ->setUBLDocumentSignatures($ublDecoment);
+$extensionContent = (new ExtensionContent)
+    ->setUBLDocumentSignatures($ublDocSignatures);
 
-// UBLExtension
-$UBLExtension[] = (new \Saleh7\Zatca\UBLExtension)
+$ublExtension = (new UBLExtension)
     ->setExtensionURI('urn:oasis:names:specification:ubl:dsig:enveloped:xades')
     ->setExtensionContent($extensionContent);
 
-$UBLExtensions = (new \Saleh7\Zatca\UBLExtensions)
-    ->setUBLExtensions($UBLExtension);
+$ublExtensions = (new UBLExtensions)
+    ->setUBLExtensions([$ublExtension]);
 
-$Signature = (new \Saleh7\Zatca\Signature)
+// --- Signature ---
+$signature = (new Signature)
     ->setId("urn:oasis:names:specification:ubl:signature:Invoice")
     ->setSignatureMethod("urn:oasis:names:specification:ubl:dsig:enveloped:xades");
-// invoiceType object
-$invoiceType = (new \Saleh7\Zatca\InvoiceType())
-    ->setInvoice('Invoice') // Invoice / Simplified
-    ->setInvoiceType('Invoice'); // Invoice / Debit / Credit
 
-// AdditionalDocumentReference
-$AdditionalDocumentReferences = [];
-$AdditionalDocumentReferences[] = (new \Saleh7\Zatca\AdditionalDocumentReference())
+// --- Invoice Type ---
+$invoiceType = (new InvoiceType())
+    ->setInvoice('simplified') // 'standard' or 'simplified'
+    ->setInvoiceType('invoice') // 'invoice', 'debit', or 'credit', 'prepayment'
+    ->setIsThirdParty(false) // Third-party transaction
+    ->setIsNominal(false) // Nominal transaction
+    ->setIsExportInvoice(false) // Export invoice
+    ->setIsSummary(false) // Summary invoice
+    ->setIsSelfBilled(false); // Self-billed invoice
+
+    // add Attachment
+    $attachment = (new Attachment())
+        ->setBase64Content('NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjcyOWQ3M2EyN2ZiNTdlOQ==',
+            'base64', 
+            'text/plain'
+        );
+
+// --- Additional Document References ---
+$additionalDocs = [];
+$additionalDocs[] = (new AdditionalDocumentReference())
     ->setId('ICV')
-    ->setUUID(23);
-
-$AdditionalDocumentReferences[] = (new \Saleh7\Zatca\AdditionalDocumentReference())
+    ->setUUID("23"); //Invoice counter value
+$additionalDocs[] = (new AdditionalDocumentReference())
     ->setId('PIH')
-    ->setPreviousInvoiceHash('NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjcyOWQ3M2EyN2ZiNTdlOQ==');
-
-$AdditionalDocumentReferences[] = (new \Saleh7\Zatca\AdditionalDocumentReference())
+    ->setAttachment($attachment); // Previous Invoice Hash
+    // ->setPreviousInvoiceHash('NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjcyOWQ3M2EyN2ZiNTdlOQ=='); // Previous Invoice Hash
+$additionalDocs[] = (new AdditionalDocumentReference())
     ->setId('QR');
 
-// Tax scheme
-$taxScheme = (new \Saleh7\Zatca\TaxScheme())
+// --- Tax Scheme & Party Tax Schemes ---
+$taxScheme = (new TaxScheme())
     ->setId("VAT");
 
-// Party Tax Scheme
-$partyTaxScheme = (new \Saleh7\Zatca\PartyTaxScheme())
+$partyTaxSchemeSupplier = (new PartyTaxScheme())
     ->setTaxScheme($taxScheme)
     ->setCompanyId('311111111101113');
 
-// party Tax Scheme Customer
-$partyTaxSchemeCustomer = (new \Saleh7\Zatca\PartyTaxScheme())
+$partyTaxSchemeCustomer = (new PartyTaxScheme())
     ->setTaxScheme($taxScheme);
 
-// Address
-$address = (new \Saleh7\Zatca\Address())
+// --- Address ---
+$address = (new Address())
     ->setStreetName('الامير سلطان')
-    ->setBuildingNumber(2322)
-    ->setPlotIdentification(2223)
+    ->setBuildingNumber("2322")
+    ->setPlotIdentification("2223")
     ->setCitySubdivisionName('الرياض')
     ->setCityName('الرياض | Riyadh')
     ->setPostalZone('23333')
     ->setCountry('SA');
 
-// Legal Entity
-$legalEntity = (new \Saleh7\Zatca\LegalEntity())
-        ->setRegistrationName('Acme Widget’s LTD');
+// --- Legal Entity ---
+$legalEntity = (new LegalEntity())
+    ->setRegistrationName('Acme Widget’s LTD');
 
-// Delivery
-$delivery = (new \Saleh7\Zatca\Delivery())
+// --- Delivery ---
+$delivery = (new Delivery())
     ->setActualDeliveryDate("2022-09-07");
+    // ->setLatestDeliveryDate("2022-09-07"); // If the invoice contains a supply end date (KSA-24), then the invoice must contain a supply date (KSA-5).
 
-// Party supplier Company
-$supplierCompany = (new \Saleh7\Zatca\Party())
+// --- Parties ---
+$supplierCompany = (new Party())
     ->setPartyIdentification("311111111111113")
     ->setPartyIdentificationId("CRN")
     ->setLegalEntity($legalEntity)
-    ->setPartyTaxScheme($partyTaxScheme)
+    ->setPartyTaxScheme($partyTaxSchemeSupplier)
     ->setPostalAddress($address);
 
-// Party supplier Customer
-$supplierCustomer = (new \Saleh7\Zatca\Party())
+$supplierCustomer = (new Party())
     ->setPartyIdentification("311111111111113")
     ->setPartyIdentificationId("NAT")
     ->setLegalEntity($legalEntity)
     ->setPartyTaxScheme($partyTaxSchemeCustomer)
     ->setPostalAddress($address);
 
-// Payment Means
-$clientPaymentMeans = (new \Saleh7\Zatca\PaymentMeans())
+// --- Payment Means ---
+$paymentMeans = (new PaymentMeans())
     ->setPaymentMeansCode("10");
 
-// Tax Category
-$taxCategory = (new \Saleh7\Zatca\TaxCategory())
+// --- Tax Category ---
+$taxCategory = (new TaxCategory())
     ->setPercent(15)
     ->setTaxScheme($taxScheme);
 
-// Invoice Line(s)
+// --- Allowance Charge (for Invoice Line) ---
 $allowanceCharges = [];
-$allowanceCharges[] = (new \Saleh7\Zatca\AllowanceCharge())
-->setChargeIndicator(false)
-->setAllowanceChargeReason('discount')
-->setAmount(0.00)
-->setTaxCategory($taxCategory);
+$allowanceCharges[] = (new AllowanceCharge())
+    ->setChargeIndicator(false)
+    ->setAllowanceChargeReason('discount')
+    ->setAmount(0.00)
+    ->setTaxCategory($taxCategory);
 
-// Tax Sub Total
-$taxSubTotal = (new \Saleh7\Zatca\TaxSubTotal())
+// --- Tax Sub Total & Tax Total ---
+$taxSubTotal = (new TaxSubTotal())
     ->setTaxableAmount(4)
     ->setTaxAmount(0.6)
     ->setTaxCategory($taxCategory);
 
-// Tax Total
-$taxTotal = (new \Saleh7\Zatca\TaxTotal())
+$taxTotal = (new TaxTotal())
     ->addTaxSubTotal($taxSubTotal)
     ->setTaxAmount(0.6);
 
-// Legal Monetary Total
-$legalMonetaryTotal = (new \Saleh7\Zatca\LegalMonetaryTotal())
+// --- Legal Monetary Total ---
+$legalMonetaryTotal = (new LegalMonetaryTotal())
     ->setLineExtensionAmount(4)
     ->setTaxExclusiveAmount(4)
     ->setTaxInclusiveAmount(4.60)
@@ -126,29 +141,36 @@ $legalMonetaryTotal = (new \Saleh7\Zatca\LegalMonetaryTotal())
     ->setPayableAmount(4.60)
     ->setAllowanceTotalAmount(0);
 
-// Classified Tax Category
-$classifiedTax = (new \Saleh7\Zatca\ClassifiedTaxCategory())
+// --- Classified Tax Category ---
+$classifiedTax = (new ClassifiedTaxCategory())
     ->setPercent(15)
     ->setTaxScheme($taxScheme);
 
-// Item Product
-$productItem = (new \Saleh7\Zatca\Item())
+
+// --- Item (Product) ---
+$productItem = (new Item())
     ->setName('قلم رصاص')
     ->setClassifiedTaxCategory($classifiedTax);
 
-// Price
-$price = (new \Saleh7\Zatca\Price())
-    ->setUnitCode(\Saleh7\Zatca\UnitCode::UNIT)
+// --- Allowance Charge (for Price) ---
+$allowanceChargesPrice = [];
+$allowanceChargesPrice[] = (new AllowanceCharge())
+    ->setChargeIndicator(false)
+    ->setAllowanceChargeReason('discount')
+    ->setAmount(0.00);
+// --- Price ---
+$price = (new Price())
+    ->setUnitCode(UnitCode::UNIT)
+    ->setAllowanceCharges($allowanceChargesPrice)
     ->setPriceAmount(2);
 
-// Invoice Line tax totals
-$lineTaxTotal = (new \Saleh7\Zatca\TaxTotal())
+// --- Invoice Line Tax Total ---
+$lineTaxTotal = (new TaxTotal())
     ->setTaxAmount(0.60)
     ->setRoundingAmount(4.60);
 
-// Invoice Line(s)
-$invoiceLines = [];
-$invoiceLines[] = (new \Saleh7\Zatca\InvoiceLine())
+// --- Invoice Line(s) ---
+$invoiceLine = (new InvoiceLine())
     ->setUnitCode("PCE")
     ->setId(1)
     ->setItem($productItem)
@@ -156,28 +178,60 @@ $invoiceLines[] = (new \Saleh7\Zatca\InvoiceLine())
     ->setPrice($price)
     ->setTaxTotal($lineTaxTotal)
     ->setInvoicedQuantity(2);
+$invoiceLines = [$invoiceLine];
 
+// --- Order Reference ---
+$orderReference = (new OrderReference())
+    ->setId('SME00023') // Purchase order ID
+    ->setSalesOrderId('SME00023');
+
+// --- Billing Reference ---
+$billingReferences = [
+    (new BillingReference())->setId('SME00023') // Billing reference ID
+];
+
+// add Contract
+$contract = (new Contract())
+    ->setId('SME00023');
 // Invoice
-$invoice = (new \Saleh7\Zatca\Invoice())
-    ->setUBLExtensions($UBLExtensions)
+$invoice = (new Invoice())
+    // ->setUBLExtensions($ublExtensions)
     ->setUUID('3cf5ee18-ee25-44ea-a444-2c37ba7f28be')
     ->setId('SME00023')
-    ->setIssueDate(new \DateTime())
-    ->setIssueTime(new \DateTime())
+    ->setIssueDate(new DateTime())
+    ->setIssueTime(new DateTime())
     ->setInvoiceType($invoiceType)
-    ->Signature($Signature)
-    ->setAdditionalDocumentReferences($AdditionalDocumentReferences)
-    ->setDelivery($delivery)
-    ->setAllowanceCharges($allowanceCharges)
-    ->setPaymentMeans($clientPaymentMeans)
-    ->setTaxTotal($taxTotal)
-    ->setInvoiceLines($invoiceLines)
-    ->setLegalMonetaryTotal($legalMonetaryTotal)
-    ->setAccountingCustomerParty($supplierCustomer)
-    ->setAccountingSupplierParty($supplierCompany);
+    // ->setNote('sss')->setlanguageID('ar')
+    ->setInvoiceCurrencyCode('SAR') // Currency code (ISO 4217)
+    ->setTaxCurrencyCode('SAR') // Tax currency code (ISO 4217)
+    // ->setOrderReference($orderReference) // Order reference
+    // ->setBillingReferences($billingReferences) // Order reference
+    // ->setContract($contract) // Contract ID	The identification of a contract.
+    ->setAdditionalDocumentReferences($additionalDocs) // Additional document references
+    ->setAccountingSupplierParty($supplierCompany)// Supplier company
+    ->setAccountingCustomerParty($supplierCustomer) // Customer company
+    // ->setDelivery($delivery)// Delivery
+    // ->setPaymentMeans($paymentMeans)// Payment means
+    ->setAllowanceCharges($allowanceCharges)// Allowance charges
+    ->setTaxTotal($taxTotal)// Tax total
+    ->setLegalMonetaryTotal($legalMonetaryTotal)// Legal monetary total
+    ->setInvoiceLines($invoiceLines)// Invoice lines
+    ->setSignature($signature);// Signature
 
 // Generator Invoice
-$generatorXml = new \Saleh7\Zatca\GeneratorInvoice();
+$generatorXml = new GeneratorInvoice();
 $outputXML = $generatorXml->invoice($invoice);
-header("Content-Type: application/xml; charset=utf-8");
-echo $outputXML;
+// Load the XML into a DOMDocument
+$dom = new DOMDocument('1.0', 'UTF-8');
+$dom->preserveWhiteSpace = false;
+$dom->formatOutput = true;
+$dom->loadXML($outputXML);
+$dom->encoding = 'UTF-8';
+$formattedXml = $dom->saveXML();
+
+// Convert 2-space indentation to 4-space indentation
+$formattedXml = preg_replace_callback('/^([ ]+)/m', function($matches) {
+    return str_repeat('    ', strlen($matches[1]) / 2);
+}, $formattedXml);
+
+echo $formattedXml;

@@ -5,28 +5,52 @@ use Sabre\Xml\Writer;
 use Sabre\Xml\XmlSerializable;
 use InvalidArgumentException;
 
+/**
+ * Class TaxCategory
+ *
+ * Represents a tax category for an invoice with XML serialization.
+ */
 class TaxCategory implements XmlSerializable
 {
-    private $id;
-    private $idAttributes = [
-        'schemeID' => TaxCategory::UNCL5305,
+    /** @var string|null Tax category identifier. */
+    private ?string $id = null;
+
+    /** @var array Attributes for the ID element. */
+    private array $idAttributes = [
+        'schemeID' => self::UNCL5305,
         'schemeAgencyID' => '6'
     ];
-    private $name;
-    private $percent;
-    private $taxScheme;
-    private $taxSchemeAttributes = [
-        'schemeID' => TaxCategory::UNCL5153,
+
+    /** @var string|null Tax category name. */
+    private ?string $name = null;
+
+    /** @var float|null Tax percentage. */
+    private ?float $percent = null;
+
+    /** @var TaxScheme|null Tax scheme object. */
+    private ?TaxScheme $taxScheme = null;
+
+    /** @var array Attributes for the TaxScheme element. */
+    private array $taxSchemeAttributes = [
+        'schemeID' => self::UNCL5153,
         'schemeAgencyID' => '6'
     ];
-    private $taxExemptionReason;
-    private $taxExemptionReasonCode;
+
+    /** @var string|null Tax exemption reason. */
+    private ?string $taxExemptionReason = null;
+
+    /** @var string|null Tax exemption reason code. */
+    private ?string $taxExemptionReasonCode = null;
 
     public const UNCL5305 = 'UN/ECE 5305';
     public const UNCL5153 = 'UN/ECE 5153';
 
     /**
-     * @return string
+     * Get the tax category identifier.
+     *
+     * If not explicitly set, it is derived from the percent value.
+     *
+     * @return string|null
      */
     public function getId(): ?string
     {
@@ -37,7 +61,7 @@ class TaxCategory implements XmlSerializable
         if ($this->getPercent() !== null) {
             if ($this->getPercent() >= 15) {
                 return 'S';
-            } elseif ($this->getPercent() <= 15 && $this->getPercent() >= 6) {
+            } elseif ($this->getPercent() >= 6) {
                 return 'AA';
             } else {
                 return 'Z';
@@ -48,31 +72,37 @@ class TaxCategory implements XmlSerializable
     }
 
     /**
-     * @param string $id
-     * @param array $attributes
-     * @return TaxCategory
+     * Set the tax category identifier.
+     *
+     * @param string|null $id
+     * @param array|null $attributes Optional attributes to override default ID attributes.
+     * @return self
      */
-    public function setId(?string $id, $attributes = null): TaxCategory
+    public function setId(?string $id, ?array $attributes = null): self
     {
         $this->id = $id;
-        if (isset($attributes)) {
+        if ($attributes !== null) {
             $this->idAttributes = $attributes;
         }
         return $this;
     }
 
     /**
-     * @param string $name
-     * @return TaxCategory
+     * Set the tax category name.
+     *
+     * @param string|null $name
+     * @return self
      */
-    public function setName(?string $name): TaxCategory
+    public function setName(?string $name): self
     {
         $this->name = $name;
         return $this;
     }
 
     /**
-     * @return string
+     * Get the tax percentage.
+     *
+     * @return float|null
      */
     public function getPercent(): ?float
     {
@@ -80,17 +110,21 @@ class TaxCategory implements XmlSerializable
     }
 
     /**
-     * @param string $percent
-     * @return TaxCategory
+     * Set the tax percentage.
+     *
+     * @param float|null $percent
+     * @return self
      */
-    public function setPercent(?float $percent): TaxCategory
+    public function setPercent(?float $percent): self
     {
         $this->percent = $percent;
         return $this;
     }
 
     /**
-     * @return string
+     * Get the tax scheme.
+     *
+     * @return TaxScheme|null
      */
     public function getTaxScheme(): ?TaxScheme
     {
@@ -98,21 +132,25 @@ class TaxCategory implements XmlSerializable
     }
 
     /**
-     * @param TaxScheme $taxScheme
-     * @param array $attributes
-     * @return TaxCategory
+     * Set the tax scheme.
+     *
+     * @param TaxScheme|null $taxScheme
+     * @param array|null $attributes Optional attributes to override default TaxScheme attributes.
+     * @return self
      */
-    public function setTaxScheme(?TaxScheme $taxScheme, $attributes = null): TaxCategory
+    public function setTaxScheme(?TaxScheme $taxScheme, ?array $attributes = null): self
     {
         $this->taxScheme = $taxScheme;
-        if (isset($attributes)) {
+        if ($attributes !== null) {
             $this->taxSchemeAttributes = $attributes;
         }
         return $this;
     }
 
     /**
-     * @return string
+     * Get the tax exemption reason.
+     *
+     * @return string|null
      */
     public function getTaxExemptionReason(): ?string
     {
@@ -120,44 +158,47 @@ class TaxCategory implements XmlSerializable
     }
 
     /**
-     * @param string $taxExemptionReason
-     * @return TaxCategory
+     * Set the tax exemption reason.
+     *
+     * @param string|null $taxExemptionReason
+     * @return self
      */
-    public function setTaxExemptionReason(?string $taxExemptionReason): TaxCategory
+    public function setTaxExemptionReason(?string $taxExemptionReason): self
     {
         $this->taxExemptionReason = $taxExemptionReason;
         return $this;
     }
 
     /**
-     * @param string $taxExemptionReason
-     * @return TaxCategory
+     * Set the tax exemption reason code.
+     *
+     * @param string|null $taxExemptionReasonCode
+     * @return self
      */
-    public function setTaxExemptionReasonCode(?string $taxExemptionReasonCode): TaxCategory
+    public function setTaxExemptionReasonCode(?string $taxExemptionReasonCode): self
     {
         $this->taxExemptionReasonCode = $taxExemptionReasonCode;
         return $this;
     }
 
     /**
-     * The validate function that is called during xml writing to valid the data of the object.
+     * Validate required fields before serialization.
      *
-     * @throws InvalidArgumentException An error with information about required data that is missing to write the XML
      * @return void
+     * @throws InvalidArgumentException if required fields are missing.
      */
-    public function validate()
+    public function validate(): void
     {
         if ($this->getId() === null) {
-            throw new InvalidArgumentException('Missing taxcategory id');
+            throw new InvalidArgumentException('Missing tax category id.');
         }
-
         if ($this->getPercent() === null) {
-            throw new InvalidArgumentException('Missing taxcategory percent');
+            throw new InvalidArgumentException('Missing tax category percent.');
         }
     }
 
     /**
-     * The xmlSerialize method is called during xml writing.
+     * Serializes this object to XML.
      *
      * @param Writer $writer
      * @return void
@@ -166,6 +207,7 @@ class TaxCategory implements XmlSerializable
     {
         $this->validate();
 
+        // Write ID element with attributes
         $writer->write([
             [
                 'name' => Schema::CBC . 'ID',
@@ -179,6 +221,8 @@ class TaxCategory implements XmlSerializable
                 Schema::CBC . 'Name' => $this->name,
             ]);
         }
+
+        // Write percent without decimals
         $writer->write([
             Schema::CBC . 'Percent' => number_format($this->percent, 0, '.', ''),
         ]);
@@ -199,13 +243,14 @@ class TaxCategory implements XmlSerializable
             $writer->write([
                 [
                     'name' => Schema::CAC . 'TaxScheme',
-                    'value' => [ Schema::CBC . 'ID' => [
-                        "value" => $this->getTaxScheme()->id,
-                        'attributes' => $this->taxSchemeAttributes
+                    'value' => [
+                        Schema::CBC . 'ID' => [
+                            "value" => $this->taxScheme->getId(), // Use public getter here.
+                            'attributes' => $this->taxSchemeAttributes
+                        ]
                     ]
-                ]]
+                ]
             ]);
-
         } else {
             $writer->write([
                 Schema::CAC . 'TaxScheme' => null,

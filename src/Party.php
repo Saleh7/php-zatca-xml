@@ -3,97 +3,138 @@ namespace Saleh7\Zatca;
 
 use Sabre\Xml\Writer;
 use Sabre\Xml\XmlSerializable;
+use InvalidArgumentException;
 
+/**
+ * Class Party
+ *
+ * Represents a party with identification, address, tax scheme, and legal entity information for XML serialization.
+ */
 class Party implements XmlSerializable
 {
-    private $partyIdentification;
-    private $partyIdentificationId;
-    private $postalAddress;
-    private $partyTaxScheme;
-    private $legalEntity;
+    /** @var string|null Party identification value. */
+    private ?string $partyIdentification = null;
+
+    /** @var string|null Party identification scheme identifier. */
+    private ?string $partyIdentificationId = null;
+
+    /** @var Address|null Postal address. */
+    private ?Address $postalAddress = null;
+
+    /** @var PartyTaxScheme|null Party tax scheme details. */
+    private ?PartyTaxScheme $partyTaxScheme = null;
+
+    /** @var LegalEntity|null Legal entity details. */
+    private ?LegalEntity $legalEntity = null;
 
     /**
-     * @param string $partyIdentification
-     * @return Party
+     * Set the party identification.
+     *
+     * @param string|null $partyIdentification
+     * @return self
+     * @throws InvalidArgumentException if an empty string is provided.
      */
-    public function setPartyIdentification(?string $partyIdentification): Party
+    public function setPartyIdentification(?string $partyIdentification): self
     {
+        if ($partyIdentification !== null && trim($partyIdentification) === '') {
+            throw new InvalidArgumentException('Party identification cannot be empty.');
+        }
         $this->partyIdentification = $partyIdentification;
         return $this;
     }
 
     /**
-     * @param string $partyIdentificationId
-     * @return Party
+     * Set the party identification scheme identifier.
+     *
+     * @param string|null $partyIdentificationId
+     * @return self
      */
-    public function setPartyIdentificationId(?string $partyIdentificationId): Party
+    public function setPartyIdentificationId(?string $partyIdentificationId): self
     {
+        if ($partyIdentificationId !== null && trim($partyIdentificationId) === '') {
+            throw new InvalidArgumentException('Party identification scheme ID cannot be empty.');
+        }
         $this->partyIdentificationId = $partyIdentificationId;
         return $this;
     }
 
     /**
-     * @param Address $postalAddress
-     * @return Party
+     * Set the postal address.
+     *
+     * @param Address|null $postalAddress
+     * @return self
      */
-    public function setPostalAddress(?Address $postalAddress): Party
+    public function setPostalAddress(?Address $postalAddress): self
     {
         $this->postalAddress = $postalAddress;
         return $this;
     }
 
     /**
+     * Set the party tax scheme.
+     *
      * @param PartyTaxScheme $partyTaxScheme
-     * @return Party
+     * @return self
      */
-    public function setPartyTaxScheme(PartyTaxScheme $partyTaxScheme)
+    public function setPartyTaxScheme(PartyTaxScheme $partyTaxScheme): self
     {
         $this->partyTaxScheme = $partyTaxScheme;
         return $this;
     }
 
     /**
-     * @param LegalEntity $legalEntity
-     * @return Party
+     * Set the legal entity.
+     *
+     * @param LegalEntity|null $legalEntity
+     * @return self
      */
-    public function setLegalEntity(?LegalEntity $legalEntity): Party
+    public function setLegalEntity(?LegalEntity $legalEntity): self
     {
         $this->legalEntity = $legalEntity;
         return $this;
     }
 
     /**
-     * The xmlSerialize method is called during xml writing.
+     * Serializes this object to XML.
      *
      * @param Writer $writer
      * @return void
      */
     public function xmlSerialize(Writer $writer): void
     {
-        
+        // PartyIdentification element with schemeID attribute
         if ($this->partyIdentification !== null) {
             $writer->write([
-                'name' => Schema::CAC . 'PartyIdentification',
+                'name'  => Schema::CAC . 'PartyIdentification',
                 'value' => [
-                    "name" => Schema::CBC . 'ID',
-                    "value" => $this->partyIdentification,
-                    "attributes" => [
-                        "schemeID" => "$this->partyIdentificationId"
+                    'name'       => Schema::CBC . 'ID',
+                    'value'      => $this->partyIdentification,
+                    'attributes' => [
+                        'schemeID' => $this->partyIdentificationId ?? ''
                     ]
                 ]
             ]);
         }
-         // PostalAddress
+
+        // PostalAddress element
         if ($this->postalAddress !== null) {
-            $writer->write( [ Schema::CAC . 'PostalAddress' => $this->postalAddress ] );
+            $writer->write([
+                Schema::CAC . 'PostalAddress' => $this->postalAddress
+            ]);
         }
-         //partyTaxScheme
+
+        // PartyTaxScheme element
         if ($this->partyTaxScheme !== null) {
-            $writer->write( [ Schema::CAC . 'PartyTaxScheme' => $this->partyTaxScheme ] );
+            $writer->write([
+                Schema::CAC . 'PartyTaxScheme' => $this->partyTaxScheme
+            ]);
         }
-         // PartyLegalEntity
+
+        // PartyLegalEntity element
         if ($this->legalEntity !== null) {
-            $writer->write( [ Schema::CAC . 'PartyLegalEntity' => $this->legalEntity ] );
+            $writer->write([
+                Schema::CAC . 'PartyLegalEntity' => $this->legalEntity
+            ]);
         }
     }
 }
