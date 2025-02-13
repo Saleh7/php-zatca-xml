@@ -107,7 +107,7 @@ $supplierCustomer = (new Party())
 
 // --- Payment Means ---
 $paymentMeans = (new PaymentMeans())
-    ->setPaymentMeansCode("10");
+    ->setPaymentMeansCode(\Saleh7\Zatca\Enums\PaymentTypeEnum::Cash->value);
 
 // --- Tax Category ---
 $taxCategory = (new TaxCategory())
