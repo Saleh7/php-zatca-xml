@@ -21,7 +21,7 @@
     "homepage": "https://github.com/Saleh7/php-zatca-xml",
     "license": "MIT",
     "require": {
-        "php": "^7.4||^8.1",
+        "php": "^8.1",
         "sabre/xml": "^4.0",
         "guzzlehttp/guzzle": "^7.9",
         "phpseclib/phpseclib": "^3.0"
