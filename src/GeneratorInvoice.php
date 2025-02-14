@@ -13,15 +13,22 @@ class GeneratorInvoice
     /** @var string Currency identifier used in invoice amounts. */
     public static string $currencyID;
 
+    /** @var string Holds the generated XML */
+    private string $generatedXml;
+
+    // Private constructor to force usage of signInvoice method
+    private function __construct() {}
+
     /**
      * Generate the invoice XML.
      *
      * @param Invoice $invoice The invoice object to serialize.
      * @param string $currencyId Currency identifier. Default is 'SAR'.
-     * @return string The generated XML string.
+     * @return self The instance of GeneratorInvoice.
      */
-    public static function invoice(Invoice $invoice, string $currencyId = 'SAR'): string
+    public static function invoice(Invoice $invoice, string $currencyId = 'SAR'): self
     {
+        $instance = new self();
         self::$currencyID = $currencyId;
 
         $xmlService = new Service();
@@ -32,22 +39,43 @@ class GeneratorInvoice
             'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2' => 'ext'
         ];
 
-        return $xmlService->write('Invoice', [$invoice]);
+        // Store generated XML inside the instance
+        $instance->generatedXml = $xmlService->write('Invoice', [$invoice]);
+
+        return $instance;
     }
-    public static function saveXMLToFile(string $xml, string $filename): void
+
+    /**
+     * Saves the generated invoice as an XML file.
+     *
+     * @param string $filename (Optional) File path to save the XML.
+     * @return self
+     */
+    public function saveXMLFile(string $filename = 'unsigned_invoice.xml'): self
     {
         $outputDir = 'output';
-
+        
         if (!is_dir($outputDir)) {
-            if (!mkdir($outputDir, 0777, true) && !is_dir($outputDir)) {
-                throw new \Exception("Failed to create directory: {$outputDir}");
-            }
+            mkdir($outputDir, 0777, true);
         }
 
-        $fullPath = $outputDir . '/' . $filename;
-        if (file_put_contents($fullPath, $xml) === false) {
-            throw new \Exception("Failed to write XML to file: {$fullPath}");
+        $fullPath = "{$outputDir}/{$filename}";
+
+        if (file_put_contents($fullPath, $this->generatedXml) === false) {
+            throw new \Exception("Failed to save XML to file: {$fullPath}");
         }
-        echo "Invoice XML saved to {$fullPath}\n";
+
+        echo "Invoice XML saved to: {$fullPath}\n";
+        return $this;
+    }
+
+    /**
+     * Get the generated XML string.
+     *
+     * @return string
+     */
+    public function getXML(): string
+    {
+        return $this->generatedXml;
     }
 }
