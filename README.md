@@ -30,6 +30,18 @@ Please feel free to <a href="https://github.com/Saleh7/php-zatca-xml/pulls?q=sor
 
 Designed for **easy integration**, this library provides developers with a **customizable, robust, and efficient toolkit** to automate the ZATCA e-invoicing process in PHP applications.
 
+## 🚀 Planned Features  
+
+We are actively working on expanding the capabilities of this library. If you're a developer and would like to contribute, your help is highly appreciated! 💡  
+
+- [ ] **XML to JSON Conversion** – Support for converting invoices from XML to JSON format.  
+- [ ] **JSON/Array to Invoice** – Ability to generate invoices directly from JSON or array structures.  
+- [ ] **Simplified Invoice Creation** – Streamlined generation of **Simplified Invoices**, **Debit**, and **Credit** compliant with ZATCA simplified.  
+- [ ] **Standard Invoice Creation** – Streamlined generation **Standard Invoices**, **Debit**, and **Credit** compliant with ZATCA standards.  
+- [ ] **Invoice to PDF Conversion** – Generate PDF versions of invoices for easy sharing and record-keeping.  
+
+💡 **Got an idea?** Feel free to suggest it or contribute!  
+ Let's build something great together! 🚀  
 
 ## ✨ Features  
 
