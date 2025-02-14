@@ -219,8 +219,7 @@ $invoice = (new Invoice())
     ->setSignature($signature);// Signature
 
 // Generator Invoice
-$generatorXml = new GeneratorInvoice();
-$outputXML = $generatorXml->invoice($invoice);
+$outputXML = GeneratorInvoice::invoice($invoice)->getXML();
 // Load the XML into a DOMDocument
 $dom = new DOMDocument('1.0', 'UTF-8');
 $dom->preserveWhiteSpace = false;
