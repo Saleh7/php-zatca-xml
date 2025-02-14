@@ -191,8 +191,7 @@ final class InvoiceTest extends TestCase
             ->setSignature($signature);
 
         // Generate invoice XML
-        $generatorXml = new GeneratorInvoice();
-        $outputXML = $generatorXml->invoice($invoice);
+        $outputXML = GeneratorInvoice::invoice($invoice)->getXML();
 
         // Assert that XML is generated
         $this->assertNotEmpty($outputXML, 'XML output should not be empty.');
