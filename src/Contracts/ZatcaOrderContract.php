@@ -4,7 +4,6 @@ namespace Saleh7\Zatca\Contracts;
 
 use DateTime;
 use Saleh7\Zatca\Address;
-use Saleh7\Zatca\Enums\PaymentTypeEnum;
 use Saleh7\Zatca\InvoiceType;
 use Saleh7\Zatca\LegalMonetaryTotal;
 use Saleh7\Zatca\Party;
@@ -77,9 +76,14 @@ interface ZatcaOrderContract
     /**
      * Get the payment type for the order.
      *
-     * @return PaymentTypeEnum The payment type as defined by the PaymentTypeEnum.
+     * @return string The payment type.
+     * - 10: cash
+     * - 20: cheque
+     * - 30: credit card
+     * - 40: bank transfer
+     * - 50: direct debit
      */
-    public function getPaymentType(): PaymentTypeEnum;
+    public function getPaymentType(): string;
 
     /**
      * Get the total tax details for the order.
