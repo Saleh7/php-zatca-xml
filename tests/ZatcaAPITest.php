@@ -2,30 +2,32 @@
 
 declare(strict_types=1);
 
-namespace Saleh7\Zatca\Tests;
-
-use GuzzleHttp\Client;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
-use Saleh7\Zatca\Api\ComplianceCertificateResult;
-use Saleh7\Zatca\Api\ProductionCertificateResult;
+use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\HandlerStack;
 use Saleh7\Zatca\ZatcaAPI;
 use Saleh7\Zatca\Exceptions\ZatcaApiException;
+use Saleh7\Zatca\Api\ComplianceCertificateResult;
+use Saleh7\Zatca\Api\ProductionCertificateResult;
+use InvalidArgumentException;
+use Exception;
 
 final class ZatcaAPITest extends TestCase
 {
     /**
-     * Helper method to set a custom Guzzle client in the ZatcaAPI instance.
+     * Helper method to create a Guzzle client with a mock handler.
+     *
+     * @param array $responses Array of responses for the mock handler.
+     * @return ClientInterface
      */
-    private function setHttpClient(ZatcaAPI $api, Client $client): void
+    private function createMockHttpClient(array $responses): ClientInterface
     {
-        $ref = new ReflectionClass($api);
-        $prop = $ref->getProperty('httpClient');
-        $prop->setAccessible(true);
-        $prop->setValue($api, $client);
+        $mock = new MockHandler($responses);
+        $handlerStack = HandlerStack::create($mock);
+        return new Client(['handler' => $handlerStack]);
     }
 
     /**
@@ -68,20 +70,16 @@ final class ZatcaAPITest extends TestCase
      */
     public function testRequestComplianceCertificateSuccess(): void
     {
-        // Simulate a successful API response.
         $responseData = [
-            'binarySecurityToken' => base64_encode("MIICBDCCAaqgAwIBAgIGAZT/XebzMAoGCCqGSM49BAMCMBUxEzARBgNVBAMMCmVJbnZvaWNpbmcwHhcNMjUwMjEzMTI1MjA2WhcNMzAwMjEyMjEwMDAwWjBUMRgwFgYDVQQDDA9NeSBPcmdhbml6YXRpb24xEzARBgNVBAoMCk15IENvbXBhbnkxFjAUBgNVBAsMDUlUIERlcGFydG1lbnQxCzAJBgNVBAYTAlNBMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEdg+fe1K42qCMlH8MQmxi02RzKU3SfNHA5QUTh9ub6vqiTvY5ON0Q3CjBJ2qzrCeBguijyQQCFARDulpKaWAaW6OBqTCBpjAMBgNVHRMBAf8EAjAAMIGVBgNVHREEgY0wgYqkgYcwgYQxIDAeBgNVBAQMFzEtU2FsZWh8Mi0xbnwzLVNNRTAwMDIzMR8wHQYKCZImiZPyLGQBAQwPMzEyMzQ1Njc4OTAxMjMzMQ0wCwYDVQQMDAQxMTAwMRswGQYDVQQaDBJSaXlhZGggMTIzNCBTdHJlZXQxEzARBgNVBA8MClRlY2hub2xvZ3kwCgYIKoZIzj0EAwIDSAAwRQIgErxTxDItQktdppV5w8n4uChk0m9MAuCQAU7T/5TbGXcCIQDg/k1roWKR5lQF9IiNsca950t0BMefvBv3nEQodGegYQ=="),
+            'binarySecurityToken' => base64_encode("MIICBDCCAaqgAwIBAgIGAZT/XebzMAoGCCqGSM49BAMCMBUxEzARBgNVBAMMCmVJbnZvaWNpbmcwHhcNMjUwMjEzMTI1MjA2WhcNMzAwMjEyMjEwMDAwWjBUMRgwFgYDVQQDDA9NeSBPcmdhbml6YXRpb24xEzARBgNVBAoMCk15IENvbXBhbnkxFjAUBgNVBAsMDUlUIERlcGFydG1lbnQxCzAJBgNVBAYTAlNBMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEdg+fe1K42qCMlH8MQmxi02RzKU3SfNHA5QUTh9ub6vqiTvY5ON0Q3CjBJ2qzrCeBguijyQQCFARDulpKaWAaW6OBqTCBpjAMBgNVHRMBAf8EAjAAMIGVBgNVHREEgY0wgYqkgYcwgYQxIDAeBgNVBAQMFzEtU2FsZWh8Mi0xbnwzLVNNRTAwMDIzMR8wHQYKCZImiZPyLGQBAQwPMzEyMzQ1Njc4OTAxMjMzMQ0wCwYDVQQMDAQxMTAwMRswGQYDVQQaDBJSaXlhZGggMTIzNCBTdHJlZXQxEzARBgNVBA8MClRlY2hub2xvZ3kwCgYIKoZIzj0EAwIDRwAwRAIgJMOBzaCGqhov7dKF/Ftb1smpMQvLURr8+xbbTaMWJtoCIA3Jz79S0UsaSob3n6zNZnm56aDCQ+20V6fbxKBz40dl"),
             'secret'              => "Dehvg1fc8GF6Jwt5bOxXwC6enR93VxeNEo2mlUatfgw=",
             'requestID'           => "1234567890123"
         ];
-        $mock = new MockHandler([
+        $client = $this->createMockHttpClient([
             new Response(200, [], json_encode($responseData))
         ]);
-        $handlerStack = HandlerStack::create($mock);
-        $client = new Client(['handler' => $handlerStack]);
 
-        $api = new ZatcaAPI('sandbox');
-        $this->setHttpClient($api, $client);
+        $api = new ZatcaAPI('sandbox', $client);
 
         $csr = "MIIB3DCCAYMCAQAwVDEYMBYGA1UEAwwPTXkgT3JnYW5pemF0aW9uMRMwEQYDVQQKDApNeSBDb21wYW55MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MQswCQYDVQQGEwJTQTBWMBAGByqGSM49AgEGBSuBBAAKA0IABHYPn3tSuNqgjJR/DEJsYtNkcylN0nzRwOUFE4fbm+r6ok72OTjdENwowSdqs6wngYLoo8kEAhQEQ7paSmlgGluggc8wgcwGCSqGSIb3DQEJDjGBvjCBuzAhBgkrBgEEAYI3FAIEFAwSWkFUQ0EtQ29kZS1TaWduaW5nMIGVBgNVHREEgY0wgYqkgYcwgYQxIDAeBgNVBAQMFzEtU2FsZWh8Mi0xbnwzLVNNRTAwMDIzMR8wHQYKCZImiZPyLGQBAQwPMzEyMzQ1Njc4OTAxMjMzMQ0wCwYDVQQMDAQxMTAwMRswGQYDVQQaDBJSaXlhZGggMTIzNCBTdHJlZXQxEzARBgNVBA8MClRlY2hub2xvZ3kwCgYIKoZIzj0EAwIDRwAwRAIgJMOBzaCGqhov7dKF/Ftb1smpMQvLURr8+xbbTaMWJtoCIA3Jz79S0UsaSob3n6zNZnm56aDCQ+20V6fbxKBz40dl";
         $result = $api->requestComplianceCertificate($csr, "123123");
@@ -104,20 +102,17 @@ final class ZatcaAPITest extends TestCase
             'uuid'        => 'dummyUuid',
             'invoice'     => base64_encode("signedInvoiceData")
         ];
-        $mock = new MockHandler([
+        $client = $this->createMockHttpClient([
             new Response(200, [], json_encode($responseData))
         ]);
-        $handlerStack = HandlerStack::create($mock);
-        $client = new Client(['handler' => $handlerStack]);
 
-        $api = new ZatcaAPI('sandbox');
-        $this->setHttpClient($api, $client);
+        $api = new ZatcaAPI('sandbox', $client);
 
-        $certificate = "dummy certificate";
-        $secret = "dummySecret";
-        $signedInvoice = "signedInvoiceData";
-        $invoiceHash = "dummyHash";
-        $uuid = "dummyUuid";
+        $certificate  = "dummy certificate";
+        $secret       = "dummySecret";
+        $signedInvoice= "signedInvoiceData";
+        $invoiceHash  = "dummyHash";
+        $uuid         = "dummyUuid";
 
         $result = $api->validateInvoiceCompliance($certificate, $secret, $signedInvoice, $invoiceHash, $uuid);
         $this->assertIsArray($result);
@@ -134,18 +129,15 @@ final class ZatcaAPITest extends TestCase
             'secret'              => "prodSecret",
             'requestID'           => "prodRequestID"
         ];
-        $mock = new MockHandler([
+        $client = $this->createMockHttpClient([
             new Response(200, [], json_encode($responseData))
         ]);
-        $handlerStack = HandlerStack::create($mock);
-        $client = new Client(['handler' => $handlerStack]);
 
-        $api = new ZatcaAPI('sandbox');
-        $this->setHttpClient($api, $client);
+        $api = new ZatcaAPI('sandbox', $client);
 
-        $certificate = "dummy certificate";
-        $secret = "dummySecret";
-        $complianceRequestId = "dummyComplianceRequestID";
+        $certificate          = "dummy certificate";
+        $secret               = "dummySecret";
+        $complianceRequestId  = "dummyComplianceRequestID";
 
         $result = $api->requestProductionCertificate($certificate, $secret, $complianceRequestId);
         $this->assertInstanceOf(ProductionCertificateResult::class, $result);
@@ -164,20 +156,17 @@ final class ZatcaAPITest extends TestCase
             'uuid'        => 'dummyUuid',
             'invoice'     => base64_encode("signedInvoiceData")
         ];
-        $mock = new MockHandler([
+        $client = $this->createMockHttpClient([
             new Response(200, [], json_encode($responseData))
         ]);
-        $handlerStack = HandlerStack::create($mock);
-        $client = new Client(['handler' => $handlerStack]);
 
-        $api = new ZatcaAPI('sandbox');
-        $this->setHttpClient($api, $client);
+        $api = new ZatcaAPI('sandbox', $client);
 
-        $certificate = "dummy certificate";
-        $secret = "dummySecret";
+        $certificate   = "dummy certificate";
+        $secret        = "dummySecret";
         $signedInvoice = "signedInvoiceData";
-        $invoiceHash = "dummyHash";
-        $egsUuid = "dummyUuid";
+        $invoiceHash   = "dummyHash";
+        $egsUuid       = "dummyUuid";
 
         $result = $api->submitClearanceInvoice($certificate, $secret, $signedInvoice, $invoiceHash, $egsUuid);
         $this->assertIsArray($result);
@@ -190,17 +179,12 @@ final class ZatcaAPITest extends TestCase
     public function testSendRequestFailure(): void
     {
         $errorResponseData = ['error' => 'Bad Request'];
-        $mock = new MockHandler([
+        $client = $this->createMockHttpClient([
             new Response(400, [], json_encode($errorResponseData))
         ]);
-        $handlerStack = HandlerStack::create($mock);
-        $client = new Client(['handler' => $handlerStack]);
 
-        $api = new ZatcaAPI('sandbox');
-        $this->setHttpClient($api, $client);
-
+        $api = new ZatcaAPI('sandbox', $client);
         $this->expectException(ZatcaApiException::class);
         $api->requestComplianceCertificate("dummy csr", "123123");
     }
-    
 }

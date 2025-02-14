@@ -5,10 +5,14 @@ namespace Saleh7\Zatca\Exceptions;
 use Exception;
 use Throwable;
 
+/**
+ * Class ZatcaException
+ *
+ * Base exception class for ZATCA-related errors.
+ */
 class ZatcaException extends Exception
 {
-    protected string $defaultMessage = '';
-
+    protected string $defaultMessage = 'An error occurred';
     protected array $context = [];
 
     public function __construct(?string $message = null, array $context = [], int $code = 0, ?Throwable $previous = null)
@@ -20,7 +24,6 @@ class ZatcaException extends Exception
     public function withContext(array $context): self
     {
         $this->context = array_merge($this->context, $context);
-
         return $this;
     }
 

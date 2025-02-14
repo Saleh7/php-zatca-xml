@@ -2,9 +2,11 @@
 
 namespace Saleh7\Zatca\Exceptions;
 
-use Exception;
-use Throwable;
-
+/**
+ * Class ZatcaApiException
+ *
+ * Exception thrown for API communication errors.
+ */
 class ZatcaApiException extends ZatcaException
 {
     protected string $defaultMessage = 'Zatca API request failed.';

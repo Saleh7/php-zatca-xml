@@ -7,7 +7,7 @@ namespace Saleh7\Zatca\Api;
  *
  * Holds the production certificate response data.
  */
-class ProductionCertificateResult
+final class ProductionCertificateResult
 {
     private string $certificate;
     private string $secret;
@@ -16,8 +16,8 @@ class ProductionCertificateResult
     public function __construct(string $certificate, string $secret, string $requestId)
     {
         $this->certificate = $certificate;
-        $this->secret = $secret;
-        $this->requestId = $requestId;
+        $this->secret      = $secret;
+        $this->requestId   = $requestId;
     }
 
     public function getCertificate(): string
