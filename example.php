@@ -107,7 +107,7 @@ $supplierCustomer = (new Party())
 
 // --- Payment Means ---
 $paymentMeans = (new PaymentMeans())
-    ->setPaymentMeansCode('10');
+    ->setPaymentMeansCode("10");
 
 // --- Tax Category ---
 $taxCategory = (new TaxCategory())

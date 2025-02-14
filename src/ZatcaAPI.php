@@ -36,8 +36,6 @@ class ZatcaAPI
      */
     public function __construct(string $environment = 'sandbox', ?ClientInterface $client = null)
     {
-        $this->environment = $environment;
-
         if (!isset(self::ENVIRONMENTS[$environment])) {
             $validEnvs = implode(', ', array_keys(self::ENVIRONMENTS));
             throw new InvalidArgumentException("Invalid environment. Valid options: $validEnvs");
