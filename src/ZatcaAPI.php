@@ -1,9 +1,15 @@
 <?php
+
 namespace Saleh7\Zatca;
 
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Message\ResponseInterface;
+use Saleh7\Zatca\Api\ComplianceCertificateResult;
+use Saleh7\Zatca\Api\ProductionCertificateResult;
+use Saleh7\Zatca\Exceptions\ZatcaApiException;
+use InvalidArgumentException;
 
 /**
  * ZATCA E-Invoicing API Client for compliance and reporting operations.
@@ -15,31 +21,43 @@ class ZatcaAPI
         'simulation' => 'https://gw-fatoora.zatca.gov.sa/e-invoicing/simulation',
         'production' => 'https://gw-fatoora.zatca.gov.sa/e-invoicing/core',
     ];
-    
+
     private const API_VERSION = 'V2';
     private const SUCCESS_STATUS_CODES = [200, 202];
-    
-    private Client $httpClient;
+
+    private ClientInterface $httpClient;
     private bool $allowWarnings = false;
-    
+    private string $environment;
+
     /**
      * @param string $environment API environment (sandbox|simulation|production)
-     * @throws \InvalidArgumentException For invalid environment
+     * @param ClientInterface|null $client Optional HTTP client to enable dependency injection.
+     * @throws InvalidArgumentException For invalid environment.
      */
-    public function __construct(string $environment = 'sandbox')
+    public function __construct(string $environment = 'sandbox', ?ClientInterface $client = null)
     {
         if (!isset(self::ENVIRONMENTS[$environment])) {
             $validEnvs = implode(', ', array_keys(self::ENVIRONMENTS));
-            throw new \InvalidArgumentException("Invalid environment. Valid options: $validEnvs");
+            throw new InvalidArgumentException("Invalid environment. Valid options: $validEnvs");
         }
-    
-        $this->httpClient = new Client([
-            'base_uri' => self::ENVIRONMENTS[$environment],
+        $this->environment = $environment;
+        $this->httpClient  = $client ?? new Client([
+            'base_uri' => $this->getBaseUri(),
             'timeout'  => 30,
             'verify'   => true,
         ]);
     }
-    
+
+    /**
+     * Returns the base URI for the current environment.
+     *
+     * @return string
+     */
+    public function getBaseUri(): string
+    {
+        return self::ENVIRONMENTS[$this->environment];
+    }
+
     /**
      * Load CSR file content.
      *
@@ -58,7 +76,7 @@ class ZatcaAPI
         }
         return $content;
     }
-    
+
     /**
      * Enable/disable acceptance of warning responses.
      */
@@ -66,7 +84,7 @@ class ZatcaAPI
     {
         $this->allowWarnings = $allow;
     }
-    
+
     /**
      * Request compliance certificate using CSR and OTP.
      *
@@ -83,14 +101,14 @@ class ZatcaAPI
             ['OTP' => $otp],
             ['csr' => base64_encode($csr)]
         );
-    
+
         return new ComplianceCertificateResult(
             $this->formatCertificate($response['binarySecurityToken'] ?? ''),
             $response['secret'] ?? '',
             $response['requestID'] ?? ''
         );
     }
-    
+
     /**
      * Validate invoice compliance with ZATCA regulations.
      *
@@ -122,11 +140,11 @@ class ZatcaAPI
                 $this->createAuthHeaders($certificate, $secret)
             );
         } catch (ZatcaApiException $e) {
-            // ComplianceValidator::handleErrors($e->getResponseData(), $this->allowWarnings);
+            // يمكن إضافة منطق لمعالجة التحذيرات هنا إذا لزم الأمر.
             throw $e;
         }
     }
-    
+
     /**
      * Request production certificate using compliance credentials.
      *
@@ -148,14 +166,14 @@ class ZatcaAPI
             ['compliance_request_id' => $complianceRequestId],
             $this->createAuthHeaders($certificate, $secret)
         );
-    
+
         return new ProductionCertificateResult(
             $this->formatCertificate($response['binarySecurityToken'] ?? ''),
             $response['secret'] ?? '',
             $response['requestID'] ?? ''
         );
     }
-    
+
     /**
      * Submit invoice for clearance reporting.
      *
@@ -186,7 +204,7 @@ class ZatcaAPI
             $this->createAuthHeaders($certificate, $secret)
         );
     }
-    
+
     /**
      * Generate authentication headers for secured endpoints.
      *
@@ -196,16 +214,16 @@ class ZatcaAPI
      */
     private function createAuthHeaders(string $certificate, string $secret): array
     {
-        $cleanCert = trim(($certificate));
+        $cleanCert   = trim($certificate);
         $credentials = base64_encode($cleanCert . ':' . $secret);
         return ['Authorization' => 'Basic ' . $credentials];
     }
-    
+
     /**
      * Core request handling with Guzzle.
      *
      * @param string $method HTTP method.
-     * @param string $endpoint API endpoint (relative path, no leading slash).
+     * @param string $endpoint API endpoint.
      * @param array $headers Additional headers.
      * @param array $payload Request payload.
      * @param array $authHeaders Optional auth headers.
@@ -220,52 +238,52 @@ class ZatcaAPI
         array $authHeaders = []
     ): array {
         try {
+            $mergedHeaders = array_merge(
+                [
+                    'Accept-Version' => self::API_VERSION,
+                    'Accept'         => 'application/json',
+                ],
+                $headers,
+                $authHeaders
+            );
+
             $options = [
-                'headers' => array_merge(
-                    [
-                        'Accept-Version' => self::API_VERSION,
-                        'Accept' => 'application/json',
-                    ],
-                    $headers,
-                    $authHeaders
-                ),
-                'json' => $payload,
+                'headers' => $mergedHeaders,
+                'json'    => $payload,
             ];
-    
-            // Debugging: Print the full URL
-            $fullUrl = self::ENVIRONMENTS['sandbox'] . $endpoint;
-            //echo "Request URL: $fullUrl\n";
-    
-            $response = $this->httpClient->request($method, $fullUrl, $options); // Use the full URL
+
+            // استخدام عنوان URL المبني على البيئة الحالية
+            $url = $this->getBaseUri() . $endpoint;
+
+            $response = $this->httpClient->request($method, $url, $options);
             $statusCode = $response->getStatusCode();
-    
+
             if (!$this->isSuccessfulResponse($statusCode)) {
-                throw new ZatcaApiException(
-                    "API request failed: $endpoint",
-                    $statusCode,
-                    $this->parseResponse($response)
-                );
+                throw new ZatcaApiException(null, [
+                    'endpoint' => $endpoint,
+                    'options'  => $options,
+                    'response' => $this->parseResponse($response),
+                ]);
             }
-    
+
             return $this->parseResponse($response);
         } catch (GuzzleException $e) {
-            throw new ZatcaApiException(
-                "HTTP request failed: " . $e->getMessage(),
-                $e->getCode(),
-                null,
-                $e
-            );
+            throw new ZatcaApiException('HTTP request failed', [
+                'message'  => $e->getMessage(),
+                'endpoint' => $endpoint,
+            ], $e->getCode(), $e);
         }
     }
-    
-        /**
-     * Validate HTTP status code against success criteria
+
+    /**
+     * Validate HTTP status code against success criteria.
      */
     private function isSuccessfulResponse(int $statusCode): bool
     {
         return in_array($statusCode, self::SUCCESS_STATUS_CODES, true) &&
-            ($this->allowWarnings || $statusCode === 200);
+               ($this->allowWarnings || $statusCode === 200);
     }
+
     /**
      * Parse API response.
      *
@@ -276,15 +294,15 @@ class ZatcaAPI
     private function parseResponse(ResponseInterface $response): array
     {
         $content = $response->getBody()->getContents();
-        $data = json_decode($content, true);
-    
+        $data    = json_decode($content, true);
+
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new ZatcaApiException('Failed to parse API response: ' . json_last_error_msg());
         }
-    
+
         return $data;
     }
-    
+
     /**
      * Format certificate string with PEM boundaries.
      *
@@ -296,93 +314,33 @@ class ZatcaAPI
         $decoded = base64_decode($base64Certificate);
         return "-----BEGIN CERTIFICATE-----\n{$decoded}\n-----END CERTIFICATE-----";
     }
-}
 
-/**
- * Class ComplianceCertificateResult
- *
- * Holds the compliance certificate response data.
- */
-class ComplianceCertificateResult
-{
-    private string $certificate;
-    private string $secret;
-    private string $requestId;
-    
-    public function __construct(string $certificate, string $secret, string $requestId)
+    /**
+     * Save certificate data to a JSON file.
+     *
+     * @param string $certificate The certificate string.
+     * @param string $secret      The API secret.
+     * @param string $requestId   The request ID.
+     * @param string $filePath    Path to save the JSON file.
+     * @return void
+     * @throws \Exception If file cannot be written.
+     */
+    public function saveToJson(string $certificate, string $secret, string $requestId, string $filePath): void
     {
-        $this->certificate = $certificate;
-        $this->secret      = $secret;
-        $this->requestId   = $requestId;
-    }
-    
-    public function getCertificate(): string
-    {
-        return $this->certificate;
-    }
-    
-    public function getSecret(): string
-    {
-        return $this->secret;
-    }
-    
-    public function getRequestId(): string
-    {
-        return $this->requestId;
-    }
-}
+        $data = [
+            'certificate' => $certificate,
+            'secret'      => $secret,
+            'requestId'   => $requestId,
+        ];
 
-/**
- * Class ProductionCertificateResult
- *
- * Holds the production certificate response data.
- */
-class ProductionCertificateResult
-{
-    private string $certificate;
-    private string $secret;
-    private string $requestId;
-    
-    public function __construct(string $certificate, string $secret, string $requestId)
-    {
-        $this->certificate = $certificate;
-        $this->secret      = $secret;
-        $this->requestId   = $requestId;
-    }
-    
-    public function getCertificate(): string
-    {
-        return $this->certificate;
-    }
-    
-    public function getSecret(): string
-    {
-        return $this->secret;
-    }
-    
-    public function getRequestId(): string
-    {
-        return $this->requestId;
-    }
-}
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new \Exception("Failed to encode data to JSON: " . json_last_error_msg());
+        }
 
-/**
- * Class ZatcaApiException
- *
- * Custom exception for API errors.
- */
-class ZatcaApiException extends \Exception
-{
-    private ?array $responseData;
-    
-    public function __construct(string $message, int $code = 0, ?array $responseData = null, \Throwable $previous = null)
-    {
-        parent::__construct($message, $code, $previous);
-        $this->responseData = $responseData;
+        if (file_put_contents($filePath, $json) === false) {
+            throw new \Exception("Failed to write JSON data to file: {$filePath}");
+        }
     }
     
-    public function getResponseData(): ?array
-    {
-        return $this->responseData;
-    }
 }
