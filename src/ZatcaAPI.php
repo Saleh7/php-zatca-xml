@@ -4,6 +4,9 @@ namespace Saleh7\Zatca;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Message\ResponseInterface;
+use Saleh7\Zatca\Api\ComplianceCertificateResult;
+use Saleh7\Zatca\Api\ProductionCertificateResult;
+use Saleh7\Zatca\Exceptions\ZatcaApiException;
 
 /**
  * ZATCA E-Invoicing API Client for compliance and reporting operations.
@@ -21,6 +24,7 @@ class ZatcaAPI
     
     private Client $httpClient;
     private bool $allowWarnings = false;
+    private string $environment;
     
     /**
      * @param string $environment API environment (sandbox|simulation|production)
@@ -28,16 +32,28 @@ class ZatcaAPI
      */
     public function __construct(string $environment = 'sandbox')
     {
+        $this->environment = $environment;
+
         if (!isset(self::ENVIRONMENTS[$environment])) {
             $validEnvs = implode(', ', array_keys(self::ENVIRONMENTS));
             throw new \InvalidArgumentException("Invalid environment. Valid options: $validEnvs");
         }
     
         $this->httpClient = new Client([
-            'base_uri' => self::ENVIRONMENTS[$environment],
+            'base_uri' => $this->getBaseUri(),
             'timeout'  => 30,
             'verify'   => true,
         ]);
+    }
+
+    /**
+     * Returns the base URI for the current environment.
+     *
+     * @return string
+     */
+    public function getBaseUri(): string
+    {
+        return self::ENVIRONMENTS[$this->environment];
     }
     
     /**
@@ -122,7 +138,7 @@ class ZatcaAPI
                 $this->createAuthHeaders($certificate, $secret)
             );
         } catch (ZatcaApiException $e) {
-            // ComplianceValidator::handleErrors($e->getResponseData(), $this->allowWarnings);
+            // ComplianceValidator::handleErrors($e->getContext(), $this->allowWarnings);
             throw $e;
         }
     }
@@ -240,21 +256,19 @@ class ZatcaAPI
             $statusCode = $response->getStatusCode();
     
             if (!$this->isSuccessfulResponse($statusCode)) {
-                throw new ZatcaApiException(
-                    "API request failed: $endpoint",
-                    $statusCode,
-                    $this->parseResponse($response)
-                );
+                throw new ZatcaApiException(null, [
+                    'endpoint' => $endpoint,
+                    'options' => $options,
+                    'code' => $this->parseResponse($response),
+                ]);
             }
     
             return $this->parseResponse($response);
         } catch (GuzzleException $e) {
-            throw new ZatcaApiException(
-                "HTTP request failed: " . $e->getMessage(),
-                $e->getCode(),
-                null,
-                $e
-            );
+            throw new ZatcaApiException('HTTP request failed', [
+                'message' => $e->getMessage(),
+                'endpoint' => $endpoint,
+            ], $e->getCode(), $e);
         }
     }
     
@@ -295,94 +309,5 @@ class ZatcaAPI
     {
         $decoded = base64_decode($base64Certificate);
         return "-----BEGIN CERTIFICATE-----\n{$decoded}\n-----END CERTIFICATE-----";
-    }
-}
-
-/**
- * Class ComplianceCertificateResult
- *
- * Holds the compliance certificate response data.
- */
-class ComplianceCertificateResult
-{
-    private string $certificate;
-    private string $secret;
-    private string $requestId;
-    
-    public function __construct(string $certificate, string $secret, string $requestId)
-    {
-        $this->certificate = $certificate;
-        $this->secret      = $secret;
-        $this->requestId   = $requestId;
-    }
-    
-    public function getCertificate(): string
-    {
-        return $this->certificate;
-    }
-    
-    public function getSecret(): string
-    {
-        return $this->secret;
-    }
-    
-    public function getRequestId(): string
-    {
-        return $this->requestId;
-    }
-}
-
-/**
- * Class ProductionCertificateResult
- *
- * Holds the production certificate response data.
- */
-class ProductionCertificateResult
-{
-    private string $certificate;
-    private string $secret;
-    private string $requestId;
-    
-    public function __construct(string $certificate, string $secret, string $requestId)
-    {
-        $this->certificate = $certificate;
-        $this->secret      = $secret;
-        $this->requestId   = $requestId;
-    }
-    
-    public function getCertificate(): string
-    {
-        return $this->certificate;
-    }
-    
-    public function getSecret(): string
-    {
-        return $this->secret;
-    }
-    
-    public function getRequestId(): string
-    {
-        return $this->requestId;
-    }
-}
-
-/**
- * Class ZatcaApiException
- *
- * Custom exception for API errors.
- */
-class ZatcaApiException extends \Exception
-{
-    private ?array $responseData;
-    
-    public function __construct(string $message, int $code = 0, ?array $responseData = null, \Throwable $previous = null)
-    {
-        parent::__construct($message, $code, $previous);
-        $this->responseData = $responseData;
-    }
-    
-    public function getResponseData(): ?array
-    {
-        return $this->responseData;
     }
 }

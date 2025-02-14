@@ -2,15 +2,18 @@
 
 declare(strict_types=1);
 
-use PHPUnit\Framework\TestCase;
+namespace Saleh7\Zatca\Tests;
+
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
+use PHPUnit\Framework\TestCase;
+use ReflectionClass;
+use Saleh7\Zatca\Api\ComplianceCertificateResult;
+use Saleh7\Zatca\Api\ProductionCertificateResult;
 use Saleh7\Zatca\ZatcaAPI;
-use Saleh7\Zatca\ZatcaApiException;
-use Saleh7\Zatca\ComplianceCertificateResult;
-use Saleh7\Zatca\ProductionCertificateResult;
+use Saleh7\Zatca\Exceptions\ZatcaApiException;
 
 final class ZatcaAPITest extends TestCase
 {
