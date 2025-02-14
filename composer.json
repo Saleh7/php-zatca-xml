@@ -50,7 +50,7 @@
         "phpcs": "vendor/bin/phpcs -n --standard=phpcs.xml ./src/"
     },
     "support": {
-        "issues": "https://github.com/Saleh7/php-zatca-xml/issues",
-        "source": "https://github.com/Saleh7/php-zatca-xml"
+        "source": "https://github.com/Saleh7/php-zatca-xml",
+        "issues": "https://github.com/Saleh7/php-zatca-xml/issues"
     }
 }
