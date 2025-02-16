@@ -353,7 +353,7 @@ class InvoiceExtension
         $isSimplified = $invoiceTypeCodeNode && str_starts_with($invoiceTypeCodeNode->getElement()->getAttribute('name'), "02");
 
         if ($isSimplified) {
-            $qrTags[] = new CertificateSignature($certificate->getCertificateSignature());
+            $qrTags[] = new CertificateSignature($certificate->getCertSignature());
         }
 
         return $qrTags;
