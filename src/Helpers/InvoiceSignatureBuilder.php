@@ -118,7 +118,7 @@ class InvoiceSignatureBuilder
         $propsReference->addChild('ds:DigestMethod', null, [
             'Algorithm' => "http://www.w3.org/2001/04/xmlenc#sha256",
         ]);
-        $propsReference->addChild('ds:DigestValue', base64_encode(hash('sha256', $signedPropertiesXml, true)));
+        $propsReference->addChild('ds:DigestValue', base64_encode(hash('sha256', $signedPropertiesXml)));
 
         // Add the signature value.
         $dsSignature->addChild('ds:SignatureValue', $this->signatureValue);
@@ -203,23 +203,22 @@ class InvoiceSignatureBuilder
     private function createSignedPropertiesXml(string $signingTime): string
     {
         $template = '<xades:SignedProperties xmlns:xades="http://uri.etsi.org/01903/v1.3.2#" Id="xadesSignedProperties">' . PHP_EOL .
-            '    <xades:SignedSignatureProperties>' . PHP_EOL .
-            '        <xades:SigningTime>SIGNING_TIME_PLACEHOLDER</xades:SigningTime>' . PHP_EOL .
-            '        <xades:SigningCertificate>' . PHP_EOL .
-            '            <xades:Cert>' . PHP_EOL .
-            '                <xades:CertDigest>' . PHP_EOL .
-            '                    <ds:DigestMethod xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>' . PHP_EOL .
-            '                    <ds:DigestValue xmlns:ds="http://www.w3.org/2000/09/xmldsig#">DIGEST_PLACEHOLDER</ds:DigestValue>' . PHP_EOL .
-            '                </xades:CertDigest>' . PHP_EOL .
-            '                <xades:IssuerSerial>' . PHP_EOL .
-            '                    <ds:X509IssuerName xmlns:ds="http://www.w3.org/2000/09/xmldsig#">ISSUER_PLACEHOLDER</ds:X509IssuerName>' . PHP_EOL .
-            '                    <ds:X509SerialNumber xmlns:ds="http://www.w3.org/2000/09/xmldsig#">SERIAL_PLACEHOLDER</ds:X509SerialNumber>' . PHP_EOL .
-            '                </xades:IssuerSerial>' . PHP_EOL .
-            '            </xades:Cert>' . PHP_EOL .
-            '        </xades:SigningCertificate>' . PHP_EOL .
-            '    </xades:SignedSignatureProperties>' . PHP_EOL .
-            '</xades:SignedProperties>';
-
+            '                                <xades:SignedSignatureProperties>' . PHP_EOL .
+            '                                    <xades:SigningTime>SIGNING_TIME_PLACEHOLDER</xades:SigningTime>' . PHP_EOL .
+            '                                    <xades:SigningCertificate>' . PHP_EOL .
+            '                                        <xades:Cert>' . PHP_EOL .
+            '                                            <xades:CertDigest>' . PHP_EOL .
+            '                                                <ds:DigestMethod xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>' . PHP_EOL .
+            '                                                <ds:DigestValue xmlns:ds="http://www.w3.org/2000/09/xmldsig#">DIGEST_PLACEHOLDER</ds:DigestValue>' . PHP_EOL .
+            '                                            </xades:CertDigest>' . PHP_EOL .
+            '                                            <xades:IssuerSerial>' . PHP_EOL .
+            '                                                <ds:X509IssuerName xmlns:ds="http://www.w3.org/2000/09/xmldsig#">ISSUER_PLACEHOLDER</ds:X509IssuerName>' . PHP_EOL .
+            '                                                <ds:X509SerialNumber xmlns:ds="http://www.w3.org/2000/09/xmldsig#">SERIAL_PLACEHOLDER</ds:X509SerialNumber>' . PHP_EOL .
+            '                                            </xades:IssuerSerial>' . PHP_EOL .
+            '                                        </xades:Cert>' . PHP_EOL .
+            '                                    </xades:SigningCertificate>' . PHP_EOL .
+            '                                </xades:SignedSignatureProperties>' . PHP_EOL .
+            '                            </xades:SignedProperties>';
         return str_replace(
             [
                 'SIGNING_TIME_PLACEHOLDER',
