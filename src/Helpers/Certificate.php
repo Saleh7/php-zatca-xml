@@ -130,7 +130,7 @@ class Certificate
      */
     public function getCertHash(): string
     {
-        return base64_encode(hash('sha256', $this->rawCertificate, true));
+        return base64_encode(hash('sha256', $this->rawCertificate));
     }
 
     /**
