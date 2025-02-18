@@ -94,6 +94,16 @@ class Certificate
     }
 
     /**
+     * Get the encoded (base64) certificate.
+     *
+     * @return string
+     */
+    public function getEncodedCertificate(): string
+    {
+        return base64_encode($this->getRawCertificate());
+    }
+
+    /**
      * Get the X509 certificate object.
      *
      * @return X509

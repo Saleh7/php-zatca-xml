@@ -126,7 +126,7 @@ class InvoiceSignatureBuilder
         // Add key info with the certificate.
         $keyInfo = $dsSignature->addChild('ds:KeyInfo');
         $x509Data = $keyInfo->addChild('ds:X509Data');
-        $x509Data->addChild('ds:X509Certificate', $this->cert->getRawCertificate());
+        $x509Data->addChild('ds:X509Certificate', $this->cert->getEncodedCertificate());
 
         // Build the ds:Object with qualifying properties.
         $dsObject = $dsSignature->addChild('ds:Object');
