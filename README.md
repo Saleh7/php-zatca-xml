@@ -229,8 +229,16 @@ $invoiceLine = (new InvoiceLine())
 $invoiceLines = [$invoiceLine];
 
 // --- Tax Totals ---
-$taxSubTotal = (new TaxSubTotal())->setTaxableAmount(4)->setTaxAmount(0.6)->setTaxCategory($classifiedTax);
-$taxTotal = (new TaxTotal())->addTaxSubTotal($taxSubTotal)->setTaxAmount(0.6);
+$taxCategory = (new TaxCategory)
+    ->setPercent(15)
+    ->setTaxScheme($taxScheme);
+$taxSubTotal = (new TaxSubTotal)
+    ->setTaxableAmount(4)
+    ->setTaxAmount(0.6)
+    ->setTaxCategory($taxCategory);
+$taxTotal = (new TaxTotal)
+    ->addTaxSubTotal($taxSubTotal)
+    ->setTaxAmount(0.6);
 
 // --- Legal Monetary Total ---
 $legalMonetaryTotal = (new LegalMonetaryTotal())
@@ -250,16 +258,18 @@ $invoice = (new Invoice())
     ->setInvoiceType($invoiceType)
     ->setInvoiceCurrencyCode('SAR')
     ->setTaxCurrencyCode('SAR')
+    ->setDelivery($delivery)
     ->setAccountingSupplierParty($supplierCompany)
     ->setAccountingCustomerParty($supplierCustomer)
+    ->setAdditionalDocumentReferences($additionalDocs)
     ->setTaxTotal($taxTotal)
     ->setLegalMonetaryTotal($legalMonetaryTotal)
     ->setInvoiceLines($invoiceLines);
     // ......
 // --- Generate XML ---
 try {
-    $generatorXml = new GeneratorInvoice();
-    $outputXML = $generatorXml->invoice($invoice);
+    $generatorXml = GeneratorInvoice::invoice($invoice);
+    $outputXML = $generatorXml->getXML();
     
     // Save the XML to a file
     $filePath = __DIR__ . '/output/unsigned_invoice.xml';
