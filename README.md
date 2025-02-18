@@ -194,6 +194,21 @@ $address = (new Address())
     ->setPostalZone('23333')
     ->setCountry('SA');
 
+// --- Delivery ---
+$delivery = (new Delivery())->setActualDeliveryDate(date('Y-m-d'));
+
+// --- Additional Document References ---
+$additionalDocs = [];
+$additionalDocs[] = (new AdditionalDocumentReference())
+    ->setId('ICV')
+    ->setUUID("23"); //Invoice counter value
+$additionalDocs[] = (new AdditionalDocumentReference())
+    ->setId('PIH')
+    ->setAttachment($attachment); // Previous Invoice Hash
+    // ->setPreviousInvoiceHash('NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjcyOWQ3M2EyN2ZiNTdlOQ=='); // Previous Invoice Hash
+$additionalDocs[] = (new AdditionalDocumentReference())
+    ->setId('QR');
+
 $legalEntity = (new LegalEntity())->setRegistrationName('Acme Widget’s LTD');
 
 $supplierCompany = (new Party())
@@ -229,8 +244,16 @@ $invoiceLine = (new InvoiceLine())
 $invoiceLines = [$invoiceLine];
 
 // --- Tax Totals ---
-$taxSubTotal = (new TaxSubTotal())->setTaxableAmount(4)->setTaxAmount(0.6)->setTaxCategory($classifiedTax);
-$taxTotal = (new TaxTotal())->addTaxSubTotal($taxSubTotal)->setTaxAmount(0.6);
+$taxCategory = (new TaxCategory)
+    ->setPercent(15)
+    ->setTaxScheme($taxScheme);
+$taxSubTotal = (new TaxSubTotal)
+    ->setTaxableAmount(4)
+    ->setTaxAmount(0.6)
+    ->setTaxCategory($taxCategory);
+$taxTotal = (new TaxTotal)
+    ->addTaxSubTotal($taxSubTotal)
+    ->setTaxAmount(0.6);
 
 // --- Legal Monetary Total ---
 $legalMonetaryTotal = (new LegalMonetaryTotal())
@@ -250,16 +273,18 @@ $invoice = (new Invoice())
     ->setInvoiceType($invoiceType)
     ->setInvoiceCurrencyCode('SAR')
     ->setTaxCurrencyCode('SAR')
+    ->setDelivery($delivery)
     ->setAccountingSupplierParty($supplierCompany)
     ->setAccountingCustomerParty($supplierCustomer)
+    ->setAdditionalDocumentReferences($additionalDocs)
     ->setTaxTotal($taxTotal)
     ->setLegalMonetaryTotal($legalMonetaryTotal)
     ->setInvoiceLines($invoiceLines);
     // ......
 // --- Generate XML ---
 try {
-    $generatorXml = new GeneratorInvoice();
-    $outputXML = $generatorXml->invoice($invoice);
+    $generatorXml = GeneratorInvoice::invoice($invoice);
+    $outputXML = $generatorXml->getXML();
     
     // Save the XML to a file
     $filePath = __DIR__ . '/output/unsigned_invoice.xml';
