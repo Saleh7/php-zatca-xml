@@ -194,6 +194,21 @@ $address = (new Address())
     ->setPostalZone('23333')
     ->setCountry('SA');
 
+// --- Delivery ---
+$delivery = (new Delivery())->setActualDeliveryDate(date('Y-m-d'));
+
+// --- Additional Document References ---
+$additionalDocs = [];
+$additionalDocs[] = (new AdditionalDocumentReference())
+    ->setId('ICV')
+    ->setUUID("23"); //Invoice counter value
+$additionalDocs[] = (new AdditionalDocumentReference())
+    ->setId('PIH')
+    ->setAttachment($attachment); // Previous Invoice Hash
+    // ->setPreviousInvoiceHash('NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjcyOWQ3M2EyN2ZiNTdlOQ=='); // Previous Invoice Hash
+$additionalDocs[] = (new AdditionalDocumentReference())
+    ->setId('QR');
+
 $legalEntity = (new LegalEntity())->setRegistrationName('Acme Widget’s LTD');
 
 $supplierCompany = (new Party())
