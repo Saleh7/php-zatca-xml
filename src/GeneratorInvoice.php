@@ -2,6 +2,7 @@
 namespace Saleh7\Zatca;
 
 use Sabre\Xml\Service;
+use Saleh7\Zatca\Exceptions\ZatcaStorageException;
 
 /**
  * Class GeneratorInvoice
@@ -49,23 +50,13 @@ class GeneratorInvoice
      * Saves the generated invoice as an XML file.
      *
      * @param string $filename (Optional) File path to save the XML.
+     * @param string|null $outputDir (Optional) Directory name. Set to null if $filename contains the full file path.
      * @return self
+     * @throws ZatcaStorageException If the XML file cannot be saved.
      */
-    public function saveXMLFile(string $filename = 'unsigned_invoice.xml'): self
+    public function saveXMLFile(string $filename = 'unsigned_invoice.xml', ?string $outputDir = 'output'): self
     {
-        $outputDir = 'output';
-        
-        if (!is_dir($outputDir)) {
-            mkdir($outputDir, 0777, true);
-        }
-
-        $fullPath = "{$outputDir}/{$filename}";
-
-        if (file_put_contents($fullPath, $this->generatedXml) === false) {
-            throw new \Exception("Failed to save XML to file: {$fullPath}");
-        }
-
-        echo "Invoice XML saved to: {$fullPath}\n";
+        (new Storage($outputDir))->put($filename, $this->generatedXml);
         return $this;
     }
 

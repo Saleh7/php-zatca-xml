@@ -5,6 +5,7 @@ namespace Saleh7\Zatca;
 use Exception;
 use InvalidArgumentException;
 
+use Saleh7\Zatca\Exceptions\ZatcaStorageException;
 use function Sabre\Xml\Deserializer\mixedContent;
 
 use Sabre\Xml\Reader;
@@ -150,13 +151,14 @@ class Attachment implements XmlSerializable, XmlDeserializable
      *
      * @param Writer $writer
      * @return void
+     * @throws ZatcaStorageException
      */
     public function xmlSerialize(Writer $writer): void
     {
         $this->validate();
 
         if (!empty($this->filePath)) {
-            $fileContents = base64_encode(file_get_contents($this->filePath));
+            $fileContents = base64_encode((new Storage)->get($this->filePath));
             $fileName = basename($this->filePath);
             $mimeType = $this->getFilePathMimeType();
         } else {

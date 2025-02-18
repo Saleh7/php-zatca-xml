@@ -76,3 +76,4 @@ $RECYCLE.BIN/
 # Generated XML files from tests
 /tests/*.xml
 composer.lock
+/.phpunit.result.cache
