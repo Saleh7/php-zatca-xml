@@ -124,17 +124,14 @@ class Storage
      *
      * @param string $file Relative or full path of the file.
      * @return string Absolute path to the file.
-     * @throws ZatcaStorageException If basePath is not set.
      */
     public function path(string $file): string
     {
-        if (!self::$basePath && !realpath($file)) {
-            throw new ZatcaStorageException("Base path is not set, and no absolute path provided.", [
-                'file' => $file,
-            ]);
+        if (self::$basePath) {
+            return self::$basePath . DIRECTORY_SEPARATOR . $file;
         }
 
-        return self::$basePath ? self::$basePath . DIRECTORY_SEPARATOR . $file : $file;
+        return $file;
     }
 
     /**

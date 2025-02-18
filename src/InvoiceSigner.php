@@ -95,6 +95,16 @@ class InvoiceSigner
     }
 
     /**
+     * Get the signed XML string.
+     *
+     * @return string
+     */
+    public function getXML(): string
+    {
+        return $this->signedInvoice;
+    }
+
+    /**
      * Returns the QR node string.
      *
      * @param string $QRCode
