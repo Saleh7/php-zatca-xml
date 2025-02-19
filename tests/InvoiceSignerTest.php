@@ -10,7 +10,7 @@ use phpseclib3\Crypt\Common\PublicKey;
 /**
  * DummyCertificate simulates a certificate with fixed dummy values.
  */
-class DummyCertificate extends Certificate {
+class DummyCertificateSing extends Certificate {
     public function __construct() {
         // No initialization required for dummy values.
     }
@@ -93,7 +93,7 @@ class InvoiceSignerTest extends TestCase
      */
     private function createDummyCertificate(): Certificate
     {
-        return new DummyCertificate();
+        return new DummyCertificateSing();
     }
 
     /**

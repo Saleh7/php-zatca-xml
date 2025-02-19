@@ -46,7 +46,7 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/phpunit",
+        "test": "vendor/bin/phpunit tests",
         "phpcs": "vendor/bin/phpcs -n --standard=phpcs.xml ./src/"
     },
     "support": {

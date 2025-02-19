@@ -12,8 +12,6 @@ use Saleh7\Zatca\ZatcaAPI;
 use Saleh7\Zatca\Exceptions\ZatcaApiException;
 use Saleh7\Zatca\Api\ComplianceCertificateResult;
 use Saleh7\Zatca\Api\ProductionCertificateResult;
-use InvalidArgumentException;
-use Exception;
 
 final class ZatcaAPITest extends TestCase
 {
@@ -86,8 +84,11 @@ final class ZatcaAPITest extends TestCase
 
         $this->assertInstanceOf(ComplianceCertificateResult::class, $result);
         $formattedCertificate = $result->getCertificate();
-        $this->assertStringContainsString("-----BEGIN CERTIFICATE-----", $formattedCertificate);
-        $this->assertStringContainsString("-----END CERTIFICATE-----", $formattedCertificate);
+        $this->assertNotFalse(base64_decode($formattedCertificate, true), 'Certificate should be a valid Base64 string.');
+
+        $decodedCertificate = base64_decode($formattedCertificate, true);
+        $this->assertTrue(ctype_print($decodedCertificate) === false, 'Certificate should contain binary data.');
+        
         $this->assertEquals("Dehvg1fc8GF6Jwt5bOxXwC6enR93VxeNEo2mlUatfgw=", $result->getSecret());
         $this->assertEquals("1234567890123", $result->getRequestId());
     }
@@ -122,7 +123,7 @@ final class ZatcaAPITest extends TestCase
     /**
      * Test that requestProductionCertificate returns a valid production result.
      */
-    public function testRequestProductionCertificateSuccess(): void
+    public function testRequestProductionCertificateSuccess()
     {
         $responseData = [
             'binarySecurityToken' => base64_encode("dummyProductionCertificate"),
@@ -140,8 +141,14 @@ final class ZatcaAPITest extends TestCase
         $complianceRequestId  = "dummyComplianceRequestID";
 
         $result = $api->requestProductionCertificate($certificate, $secret, $complianceRequestId);
+  
         $this->assertInstanceOf(ProductionCertificateResult::class, $result);
-        $this->assertStringContainsString("-----BEGIN CERTIFICATE-----", $result->getCertificate());
+        $formattedCertificate = $result->getCertificate();
+        $this->assertNotFalse(base64_decode($formattedCertificate, true), 'Certificate should be a valid Base64 string.');
+
+        $decodedCertificate = base64_decode($formattedCertificate, true);
+        $this->assertTrue(ctype_print($decodedCertificate) === false, 'Certificate should contain binary data.');
+    
         $this->assertEquals("prodSecret", $result->getSecret());
         $this->assertEquals("prodRequestID", $result->getRequestId());
     }

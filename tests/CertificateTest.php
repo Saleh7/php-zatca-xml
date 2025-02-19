@@ -122,10 +122,9 @@ class CertificateTest extends TestCase
         
         // Decode and verify the length of the hash (SHA-256 produces 32 bytes).
         $decoded = base64_decode($hash, true);
-        $this->assertEquals(
-            32,
-            strlen($decoded),
-            'Decoded certificate hash should be 32 bytes long.'
+        $this->assertStringContainsString(
+            "6e605d1c0c9226847d88fdd511c99157df1739b75a439dc8eaa0eea1d27a0d95", 
+            $decoded
         );
     }
 

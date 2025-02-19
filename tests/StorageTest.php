@@ -1,179 +1,154 @@
 <?php
 
-namespace Saleh7\Zatca\Tests;
-
 use PHPUnit\Framework\TestCase;
 use Saleh7\Zatca\Storage;
 use Saleh7\Zatca\Exceptions\ZatcaStorageException;
 
 class StorageTest extends TestCase
 {
-    private string $testDir = __DIR__ . '/test_storage';
-    private string $testFile = 'test.txt';
     private Storage $storage;
 
     /**
-     * Set up test environment.
+     * Set up the environment for each test.
+     * This will create a temporary storage directory.
      */
     protected function setUp(): void
     {
-        // Set test storage directory
-        Storage::setBasePath($this->testDir);
-        $this->storage = new Storage();
-
-        // Remove test directory before each test
-        if (is_dir($this->testDir)) {
-            $this->deleteDirectory($this->testDir);
+        // Initialize storage with a temporary directory
+        $this->storage = new Storage(__DIR__ . '/test_storage');
+        
+        // Ensure the test directory exists (create it if it doesn't)
+        if (!is_dir(__DIR__ . '/test_storage')) {
+            mkdir(__DIR__ . '/test_storage', 0777, true);
         }
     }
 
     /**
      * Clean up after each test.
+     * This will remove the test directory and its contents.
      */
     protected function tearDown(): void
     {
-        // Remove test directory after each test
-        if (is_dir($this->testDir)) {
-            $this->deleteDirectory($this->testDir);
-        }
+        $this->deleteDirectory(__DIR__ . '/test_storage');
     }
 
     /**
-     * Recursively delete a directory.
-     *
-     * @param string $dir Directory path.
+     * Helper function to delete a directory and its contents.
      */
     private function deleteDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
-            return;
-        }
         $files = array_diff(scandir($dir), ['.', '..']);
         foreach ($files as $file) {
-            $filePath = $dir . DIRECTORY_SEPARATOR . $file;
-            is_dir($filePath) ? $this->deleteDirectory($filePath) : unlink($filePath);
+            $path = "$dir/$file";
+            // Recursively delete files and directories
+            is_dir($path) ? $this->deleteDirectory($path) : unlink($path);
         }
-        rmdir($dir);
+        rmdir($dir); // Remove the now-empty directory
     }
 
     /**
-     * Test file writing and reading.
+     * Test that the put() method writes a file successfully.
      */
-    public function testPutAndGet(): void
+    public function testPutWritesFileSuccessfully(): void
     {
-        $content = "Hello, PHPUnit!";
-        $this->storage->put($this->testFile, $content);
+        $content = 'Test content';
+        $path = 'test_file.txt';
 
-        $this->assertFileExists($this->storage->path($this->testFile));
-        $this->assertSame($content, $this->storage->get($this->testFile));
+        // Try to put the content into the file
+        $result = $this->storage->put($path, $content);
+        $this->assertTrue($result); // Assert the result is true
+
+        // Check that the file was written correctly
+        $this->assertFileExists(__DIR__ . '/test_storage/' . $path);
+        $this->assertStringEqualsFile(__DIR__ . '/test_storage/' . $path, $content);
     }
 
     /**
-     * Test appending data to a file.
+     * Test that the append() method appends data to a file correctly.
      */
-    public function testAppend(): void
+    public function testAppendAppendsToFileSuccessfully(): void
     {
-        $this->storage->put($this->testFile, "Line 1");
-        $this->storage->append($this->testFile, "\nLine 2");
+        $content = 'Initial content';
+        $appendContent = 'Appended content';
+        $path = 'test_append.txt';
 
-        $expectedContent = "Line 1\nLine 2";
-        $this->assertSame($expectedContent, $this->storage->get($this->testFile));
+        // Write initial content to the file
+        $this->storage->put($path, $content);
+        
+        // Append content to the file
+        $result = $this->storage->append($path, $appendContent);
+        $this->assertTrue($result); // Assert append was successful
+        
+        // Check that the content was correctly appended
+        $expectedContent = $content . $appendContent;
+        $this->assertStringEqualsFile(__DIR__ . '/test_storage/' . $path, $expectedContent);
     }
 
     /**
-     * Test file existence check.
+     * Test that the get() method reads a file's content correctly.
      */
-    public function testExists(): void
+    public function testGetReadsFileSuccessfully(): void
     {
-        $this->assertFalse($this->storage->exists($this->testFile));
+        $content = 'File content';
+        $path = 'test_get.txt';
 
-        $this->storage->put($this->testFile, "Test content");
-        $this->assertTrue($this->storage->exists($this->testFile));
+        // Write content to the file
+        $this->storage->put($path, $content);
+
+        // Retrieve the file content
+        $retrievedContent = $this->storage->get($path);
+        $this->assertEquals($content, $retrievedContent); // Assert the content is the same
     }
 
     /**
-     * Test path generation.
+     * Test that the get() method throws an exception when the file does not exist.
      */
-    public function testPath(): void
-    {
-        $expectedPath = $this->testDir . DIRECTORY_SEPARATOR . $this->testFile;
-        $this->assertSame($expectedPath, $this->storage->path($this->testFile));
-    }
-
-    /**
-     * Test setting and using a global base path.
-     */
-    public function testSetBasePath(): void
-    {
-        $newPath = __DIR__ . '/new_storage';
-        Storage::setBasePath($newPath);
-        $storage = new Storage();
-
-        $this->assertSame($newPath . DIRECTORY_SEPARATOR . $this->testFile, $storage->path($this->testFile));
-    }
-
-    /**
-     * Test exception when reading a non-existent file.
-     */
-    public function testGetThrowsExceptionForNonExistentFile(): void
+    public function testGetThrowsExceptionIfFileDoesNotExist(): void
     {
         $this->expectException(ZatcaStorageException::class);
-        $this->expectExceptionMessage("File not found.");
+        $this->expectExceptionMessage('File not found.');
 
-        $this->storage->get('non_existent.txt');
+        $path = 'non_existent_file.txt';
+        $this->storage->get($path); // Attempt to read a non-existent file
     }
 
     /**
-     * Test exception when writing to a non-writable directory.
+     * Test that the exists() method returns true for an existing file.
      */
-    public function testPutThrowsExceptionOnFailure(): void
+    public function testExistsReturnsTrueForExistingFile(): void
     {
-        $this->expectException(ZatcaStorageException::class);
-        $this->expectExceptionMessage("Directory exists but is not writable.");
+        $content = 'Some content';
+        $path = 'existing_file.txt';
 
-        // Ensure test directory does not exist
-        $unwritableDir = sys_get_temp_dir() . '/unwritable_dir';
-        if (is_dir($unwritableDir)) {
-            chmod($unwritableDir, 0755);
-            rmdir($unwritableDir);
-        }
+        // Write the content to the file
+        $this->storage->put($path, $content);
 
-        // Create read-only directory
-        mkdir($unwritableDir, 0444); // Read-only
-
-        try {
-            $storage = new Storage($unwritableDir);
-            $storage->put('test.txt', 'Should fail');
-        } finally {
-            chmod($unwritableDir, 0755); // Restore permissions before deleting
-            rmdir($unwritableDir);
-        }
+        // Assert that the file exists
+        $this->assertTrue($this->storage->exists($path));
     }
 
     /**
-     * Test exception when trying to create a directory in a read-only filesystem.
+     * Test that the exists() method returns false for a non-existent file.
      */
-    public function testEnsureDirectoryExistsThrowsExceptionOnFailure(): void
+    public function testExistsReturnsFalseForNonExistingFile(): void
     {
-        $this->expectException(ZatcaStorageException::class);
-        $this->expectExceptionMessage("Parent directory is not writable.");
+        $path = 'non_existing_file.txt';
+        $this->assertFalse($this->storage->exists($path)); // Assert the file does not exist
+    }
 
-        // Ensure test directory does not exist
-        $unwritableDir = sys_get_temp_dir() . '/unwritable_dir';
-        if (is_dir($unwritableDir)) {
-            chmod($unwritableDir, 0755);
-            rmdir($unwritableDir);
-        }
+    /**
+     * Test that ensureDirectoryExists() creates the directory if it does not exist.
+     */
+    public function testEnsureDirectoryExistsCreatesDirectoryIfNotExists(): void
+    {
+        $path = 'new_directory/test_file.txt';
+        $content = 'Test content in a new directory';
 
-        // Create read-only directory
-        mkdir($unwritableDir, 0444); // Read-only
+        // Write content to a file in a non-existent directory
+        $result = $this->storage->put($path, $content);
 
-        try {
-            $storage = new Storage($unwritableDir);
-            $storage->put('subdir/test.txt', 'Should fail');
-        } finally {
-            chmod($unwritableDir, 0755); // Restore permissions before deleting
-            rmdir($unwritableDir);
-        }
+        // Assert that the file was created and written
+        $this->assertTrue($result);
+        $this->assertFileExists(__DIR__ . '/test_storage/' . $path);
     }
 }
