@@ -22,11 +22,11 @@ $secret = $json_data[0]['secret'];
 // get private key
 $privateKey = file_get_contents(__DIR__ .'/output/private.pem');
 
-$claenPrivateKey = trim(str_replace(["-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----"], "", $privateKey));
+$cleanPrivateKey = trim(str_replace(["-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----"], "", $privateKey));
 
 $certificate = (new Certificate(
     $certificate,
-    $claenPrivateKey,
+    $cleanPrivateKey,
     $secret 
 )); 
 
