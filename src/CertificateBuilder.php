@@ -1,9 +1,7 @@
 <?php
 namespace Saleh7\Zatca;
-/**
- * Exception for CertificateBuilder errors.
- */
-class CertificateBuilderException extends \RuntimeException {}
+use Saleh7\Zatca\Exceptions\CertificateBuilderException;
+use Saleh7\Zatca\Exceptions\ZatcaStorageException;
 
 /**
  * Class CertificateBuilder
@@ -179,14 +177,19 @@ EOL;
      *
      * @param string $csrPath Path to save the CSR (default: certificate.csr)
      * @param string $privateKeyPath Path to save the private key (default: private.pem)
+     * @throws CertificateBuilderException
      */
     public function generateAndSave(string $csrPath = 'certificate.csr', string $privateKeyPath = 'private.pem'): void {
         $this->generate();
 
         $csrContent = $this->getCsr();
-        if (file_put_contents($csrPath, $csrContent) === false) {
-            throw new CertificateBuilderException("Failed to save CSR to {$csrPath}.");
+
+        try {
+            (new Storage())->put($csrPath, $csrContent);
+        } catch (ZatcaStorageException $e) {
+            throw new CertificateBuilderException("Failed to save CSR.", $e->getContext());
         }
+
         $this->savePrivateKey($privateKeyPath);
     }
 
@@ -252,6 +255,7 @@ EOL;
      * Create a temporary OpenSSL config file.
      *
      * @return string The path to the config file.
+     * @throws CertificateBuilderException
      */
     private function createConfigFile(): string {
         $dirSection = [
@@ -272,9 +276,16 @@ EOL;
         }
 
         $tempFile = tempnam(sys_get_temp_dir(), 'zatca_');
-        if ($tempFile === false || file_put_contents($tempFile, $configContent) === false) {
-            throw new CertificateBuilderException('Failed to create or write temporary config file.');
+        if ($tempFile === false) {
+            throw new CertificateBuilderException('Failed to create temporary config file.');
         }
+
+        try {
+            (new Storage)->put($tempFile, $configContent);
+        } catch (ZatcaStorageException $e) {
+            throw new CertificateBuilderException('Failed to write temporary config file.', $e->getContext());
+        }
+
         return $tempFile;
     }
 
@@ -330,6 +341,7 @@ EOL;
      */
     public function __destruct() {
         if ($this->privateKey && is_resource($this->privateKey)) {
+            // todo DEPRECATED https://www.php.net/manual/en/function.openssl-pkey-free.php
             openssl_pkey_free($this->privateKey);
         }
     }

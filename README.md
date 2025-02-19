@@ -86,7 +86,7 @@ First, generate a **certificate signing request (CSR)** and private key:
 
 ```php
 use Saleh7\Zatca\CertificateBuilder;
-use Saleh7\Zatca\CertificateBuilderException;
+use Saleh7\Zatca\Exceptions\CertificateBuilderException;
 
 try {
     (new CertificateBuilder())
@@ -166,7 +166,7 @@ use Saleh7\Zatca\{
     InvoiceType, AdditionalDocumentReference, TaxScheme, PartyTaxScheme, Address, LegalEntity, Delivery, 
     Party, PaymentMeans, TaxCategory, AllowanceCharge, TaxSubTotal, TaxTotal, LegalMonetaryTotal, 
     ClassifiedTaxCategory, Item, Price, InvoiceLine, GeneratorInvoice, Invoice, UnitCode, 
-    OrderReference, BillingReference, Contract, Attachment
+    OrderReference, BillingReference, Contract, Attachment, Storage
 };
 
 // --- Invoice Type ---
@@ -288,7 +288,7 @@ try {
     
     // Save the XML to a file
     $filePath = __DIR__ . '/output/unsigned_invoice.xml';
-    file_put_contents($filePath, $outputXML);
+    (new Storage)->put($filePath, $outputXML);
     
     echo "Invoice XML saved to: " . $filePath . "\n";
 
@@ -305,22 +305,23 @@ Before submitting the invoice to **ZATCA**, we need to **digitally sign** it usi
 ```php
 use Saleh7\Zatca\Helpers\Certificate;
 use Saleh7\Zatca\InvoiceSigner;
+use Saleh7\Zatca\Storage;
 
 // Load the unsigned invoice XML
-$xmlInvoice = file_get_contents(__DIR__ . '/output/unsigned_invoice.xml');
+$xmlInvoice = (new Storage)->get(__DIR__ . '/output/unsigned_invoice.xml');
 
 // Load the compliance certificate data from the JSON file
-$json_certificate = file_get_contents(__DIR__ . '/output/ZATCA_certificate_data.json');
+$json_certificate = (new Storage)->get(__DIR__ . '/output/ZATCA_certificate_data.json');
 
 // Decode the JSON data
 $json_data = json_decode($json_certificate, true, 512, JSON_THROW_ON_ERROR);
 
 // Extract certificate details
-$certificate = $json_data[0]['certificate'];
-$secret = $json_data[0]['secret'];
+$certificate = $json_data['certificate'];
+$secret = $json_data['secret'];
 
 // Load the private key
-$privateKey = file_get_contents(__DIR__ . '/output/private.pem');
+$privateKey = (new Storage)->put(__DIR__ . '/output/private.pem');
 $cleanPrivateKey = trim(str_replace(["-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----"], "", $privateKey));
 
 // Create a Certificate instance

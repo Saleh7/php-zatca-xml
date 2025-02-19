@@ -2,6 +2,7 @@
 
 namespace Saleh7\Zatca;
 
+use Saleh7\Zatca\Exceptions\ZatcaStorageException;
 use Saleh7\Zatca\Helpers\QRCodeGenerator;
 use Saleh7\Zatca\Helpers\Certificate;
 use Saleh7\Zatca\Helpers\InvoiceExtension;
@@ -83,24 +84,24 @@ class InvoiceSigner
      * Saves the signed invoice as an XML file.
      *
      * @param string $filename (Optional) File path to save the XML.
+     * @param string|null $outputDir (Optional) Directory name. Set to null if $filename contains the full file path.
      * @return self
+     * @throws ZatcaStorageException If the XML file cannot be saved.
      */
-    public function saveXMLFile(string $filename = 'signed_invoice.xml'): self
+    public function saveXMLFile(string $filename = 'signed_invoice.xml', ?string $outputDir = 'output'): self
     {
-        $outputDir = 'output';
-        
-        if (!is_dir($outputDir)) {
-            mkdir($outputDir, 0777, true);
-        }
-
-        $fullPath = "{$outputDir}/{$filename}";
-
-        if (file_put_contents($fullPath, $this->signedInvoice) === false) {
-            throw new \Exception("Failed to save signed XML to file: {$fullPath}");
-        }
-
-        echo "Signed Invoice XML saved to: {$fullPath}\n";
+        (new Storage($outputDir))->put($filename, $this->signedInvoice);
         return $this;
+    }
+
+    /**
+     * Get the signed XML string.
+     *
+     * @return string
+     */
+    public function getXML(): string
+    {
+        return $this->signedInvoice;
     }
 
     /**

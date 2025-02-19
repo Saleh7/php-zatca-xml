@@ -10,6 +10,7 @@ use Saleh7\Zatca\Api\ComplianceCertificateResult;
 use Saleh7\Zatca\Api\ProductionCertificateResult;
 use Saleh7\Zatca\Exceptions\ZatcaApiException;
 use InvalidArgumentException;
+use Saleh7\Zatca\Exceptions\ZatcaStorageException;
 
 /**
  * ZATCA E-Invoicing API Client for compliance and reporting operations.
@@ -323,7 +324,8 @@ class ZatcaAPI
      * @param string $requestId   The request ID.
      * @param string $filePath    Path to save the JSON file.
      * @return void
-     * @throws \Exception If file cannot be written.
+     * @throws \Exception If failed to encode data to JSON
+     * @throws ZatcaStorageException If file cannot be written.
      */
     public function saveToJson(string $certificate, string $secret, string $requestId, string $filePath): void
     {
@@ -338,9 +340,7 @@ class ZatcaAPI
             throw new \Exception("Failed to encode data to JSON: " . json_last_error_msg());
         }
 
-        if (file_put_contents($filePath, $json) === false) {
-            throw new \Exception("Failed to write JSON data to file: {$filePath}");
-        }
+        (new Storage)->put($filePath, $json);
     }
     
 }

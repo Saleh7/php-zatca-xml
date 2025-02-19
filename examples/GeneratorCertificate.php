@@ -2,7 +2,7 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Saleh7\Zatca\CertificateBuilder;
-use Saleh7\Zatca\CertificateBuilderException;
+use Saleh7\Zatca\Exceptions\CertificateBuilderException;
 
 
 // Usage example:

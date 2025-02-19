@@ -1,7 +1,7 @@
 <?php
 use PHPUnit\Framework\TestCase;
 use Saleh7\Zatca\CertificateBuilder;
-use Saleh7\Zatca\CertificateBuilderException;
+use Saleh7\Zatca\Exceptions\CertificateBuilderException;
 
 final class CertificateBuilderTest extends TestCase
 {
