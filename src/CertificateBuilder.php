@@ -8,10 +8,11 @@ use Saleh7\Zatca\Exceptions\ZatcaStorageException;
  *
  * Builds a CSR and private key using OpenSSL.
  * The CSR is saved as a file (default "certificate.csr") and the key as a file (default "private.pem").
+ * @see https://zatca.gov.sa/en/E-Invoicing/Introduction/Guidelines/Documents/Fatoora_Portal_User_Manual_English.pdf page 31 ..
  */
 class CertificateBuilder {
     private const OID_PROD = 'ZATCA-Code-Signing';
-    private const OID_TEST = 'TSTZATCA-Code-Signing';
+    private const OID_TEST = 'PREZATCA-Code-Signing';
     private const CONFIG_TEMPLATE = <<<EOL
 [req]
 prompt = no
@@ -21,7 +22,7 @@ distinguished_name = req_dn
 [req_dn]
 
 [v3_req]
-1.3.6.1.4.1.311.20.2 = ASN1:UTF8String:%s
+1.3.6.1.4.1.311.20.2 = ASN1:PRINTABLESTRING:%s
 subjectAltName = dirName:dir_sect
 
 [dir_sect]
