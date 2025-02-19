@@ -321,7 +321,7 @@ $certificate = $json_data['certificate'];
 $secret = $json_data['secret'];
 
 // Load the private key
-$privateKey = (new Storage)->put(__DIR__ . '/output/private.pem');
+$privateKey = (new Storage)->get(__DIR__ . '/output/private.pem');
 $cleanPrivateKey = trim(str_replace(["-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----"], "", $privateKey));
 
 // Create a Certificate instance
@@ -332,10 +332,9 @@ $certificate = new Certificate(
 );
 
 // Sign the invoice
-$signedInvoice = InvoiceSigner::signInvoice($xmlInvoice, $certificate);
-
+$signedInvoice = InvoiceSigner::signInvoice($xmlInvoice, $certificate)->getXML();
 // Save the signed invoice
-InvoiceSigner::signInvoice($xmlInvoice, $certificate)->saveXMLFile('/output/signed_invoice.xml');
+(new Storage)->put(__DIR__.'/output/signed_invoice.xml', $signedInvoice);
 ```
 
 ### 📤 **5. Submitting the Signed Invoice to ZATCA**  

@@ -147,18 +147,21 @@ class Storage
         }
 
         // If directory exists but is not writable, throw exception
-        if (is_dir($path) && !is_writable($path)) {
-            throw new ZatcaStorageException('Directory exists but is not writable.', ['path' => $path]);
+        if (is_dir($path)) {
+            if (!is_writable($path)) {
+                throw new ZatcaStorageException('Directory exists but is not writable.', ['path' => $path]);
+            }
+            return;
         }
 
-        // If parent directory is not writable, fail before mkdir()
+        // Ensure the parent directory exists before creating the target directory
         $parentDir = dirname($path);
-        if (!is_writable($parentDir)) {
-            throw new ZatcaStorageException('Parent directory is not writable.', ['path' => $parentDir]);
+        if (!is_dir($parentDir)) {
+            $this->ensureDirectoryExists($parentDir); // Recursively create parent directories
         }
 
         // If directory does not exist, attempt to create it
-        if (!is_dir($path) && !mkdir($path, 0777, true) && !is_dir($path)) {
+        if (!is_dir($path) && !mkdir($path, 0755, true) && !is_dir($path)) {
             throw new ZatcaStorageException('Failed to create directory.', ['path' => $path]);
         }
     }
