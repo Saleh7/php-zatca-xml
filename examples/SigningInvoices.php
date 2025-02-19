@@ -14,10 +14,10 @@ $json_certificate = file_get_contents(__DIR__ .'/output/ZATCA_certificate_data.j
 $json_data = json_decode($json_certificate, true, 512, JSON_THROW_ON_ERROR);
 
 // get certificate
-$certificate = $json_data[0]['certificate'];
+$certificate = $json_data['certificate'];
 
 //get secret 
-$secret = $json_data[0]['secret'];
+$secret = $json_data['secret'];
 
 // get private key
 $privateKey = file_get_contents(__DIR__ .'/output/private.pem');

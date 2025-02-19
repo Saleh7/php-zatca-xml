@@ -313,7 +313,7 @@ class ZatcaAPI
     private function formatCertificate(string $base64Certificate): string
     {
         $decoded = base64_decode($base64Certificate);
-        return "-----BEGIN CERTIFICATE-----\n{$decoded}\n-----END CERTIFICATE-----";
+        return $decoded;
     }
 
     /**
