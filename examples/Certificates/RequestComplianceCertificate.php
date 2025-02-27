@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 use Saleh7\Zatca\ZatcaAPI;
 use Saleh7\Zatca\Exceptions\ZatcaApiException;

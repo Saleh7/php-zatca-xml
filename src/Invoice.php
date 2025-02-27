@@ -511,7 +511,14 @@ class Invoice implements XmlSerializable
      */
     public function setDelivery(Delivery $delivery): self
     {
-        $this->delivery = $delivery;
+        // Check if at least one field in Delivery is not empty.
+        if (
+            !empty($delivery->getActualDeliveryDate()) ||
+            !empty($delivery->getLatestDeliveryDate()) ||
+            !empty($delivery->getDeliveryLocation())
+        ) {
+            $this->delivery = $delivery;
+        }
         return $this;
     }
 
@@ -749,7 +756,7 @@ class Invoice implements XmlSerializable
                 $writer->write([
                     Schema::CAC . 'TaxTotal' => [
                         Schema::CBC . 'TaxAmount' => [
-                            'value' => number_format($this->taxTotal->taxAmount, 1, '.', ''),
+                            'value' => number_format($this->taxTotal->taxAmount, 2, '.', ''),
                             'attributes' => [
                                 'currencyID' => GeneratorInvoice::$currencyID,
                             ],

@@ -22,7 +22,7 @@ jobs:
       - name: Generator Invoice
         run: |
           cd examples
-          php GeneratorInvoice.php
+          php GeneratorStandard_Invoice.php
           php SigningInvoices.php
 
       - name: ☕ Install OpenJDK 11.0.26
@@ -86,6 +86,6 @@ jobs:
           cd ../Apps
           chmod +x fatoora
           # ✅ Validate Invoice using Fatoora
-          fatoora -validate -invoice ../../../examples/output/unsigned_invoice.xml
-          fatoora -validate -invoice ../../../examples/output/signed_invoice.xml
+          fatoora -validate -invoice ../../../examples/output/GeneratorSimplified_Invoice_Signed.xml
+          fatoora -validate -invoice ../../../examples/output/GeneratorStandard_Invoice_Signed.xml
 

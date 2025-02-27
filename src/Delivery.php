@@ -120,12 +120,14 @@ class Delivery implements XmlSerializable
     {
         $data = [];
 
-        if ($this->latestDeliveryDate !== null) {
-            $data[Schema::CBC . 'LatestDeliveryDate'] = $this->latestDeliveryDate->format('Y-m-d');
-        }
         if ($this->actualDeliveryDate !== null) {
             $data[Schema::CBC . 'ActualDeliveryDate'] = $this->actualDeliveryDate->format('Y-m-d');
         }
+
+        if ($this->latestDeliveryDate !== null) {
+            $data[Schema::CBC . 'LatestDeliveryDate'] = $this->latestDeliveryDate->format('Y-m-d');
+        }
+        
         if ($this->deliveryLocation !== null) {
             $data[Schema::CAC . 'DeliveryLocation'] = [
                 Schema::CAC . 'Address' => $this->deliveryLocation,

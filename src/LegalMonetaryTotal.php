@@ -22,10 +22,10 @@ class LegalMonetaryTotal implements XmlSerializable
     private ?float $taxInclusiveAmount = null;
 
     /** @var float The total allowance amount. Defaults to 0.0. */
-    private float $allowanceTotalAmount = 0.0;
+    private ?float $allowanceTotalAmount = null;
 
     /** @var float The total charge amount. Defaults to 0.0. */
-    private float $chargeTotalAmount = 0.0;
+    private ?float $chargeTotalAmount = null;
 
     /** @var float|null The prepaid amount. */
     private ?float $prepaidAmount = null;
@@ -231,42 +231,64 @@ class LegalMonetaryTotal implements XmlSerializable
     {
         $currencyID = GeneratorInvoice::$currencyID;
 
-        $writer->write([
-            [
+        $elements = [];
+
+        if ($this->lineExtensionAmount !== null) {
+            $elements[] = [
                 'name' => Schema::CBC . 'LineExtensionAmount',
-                'value' => number_format($this->lineExtensionAmount ?? 0, 2, '.', ''),
+                'value' => number_format($this->lineExtensionAmount, 2, '.', ''),
                 'attributes' => ['currencyID' => $currencyID],
-            ],
-            [
+            ];
+        }
+        
+        if ($this->taxExclusiveAmount !== null) {
+            $elements[] = [
                 'name' => Schema::CBC . 'TaxExclusiveAmount',
-                'value' => number_format($this->taxExclusiveAmount ?? 0, 2, '.', ''),
+                'value' => number_format($this->taxExclusiveAmount, 2, '.', ''),
                 'attributes' => ['currencyID' => $currencyID],
-            ],
-            [
+            ];
+        }
+        
+        if ($this->taxInclusiveAmount !== null) {
+            $elements[] = [
                 'name' => Schema::CBC . 'TaxInclusiveAmount',
-                'value' => number_format($this->taxInclusiveAmount ?? 0, 2, '.', ''),
+                'value' => number_format($this->taxInclusiveAmount, 2, '.', ''),
                 'attributes' => ['currencyID' => $currencyID],
-            ],
-            [
+            ];
+        }
+        
+        if ($this->allowanceTotalAmount !== null) {
+            $elements[] = [
                 'name' => Schema::CBC . 'AllowanceTotalAmount',
                 'value' => number_format($this->allowanceTotalAmount, 2, '.', ''),
                 'attributes' => ['currencyID' => $currencyID],
-            ],
-            [
+            ];
+        }
+        
+        if ($this->chargeTotalAmount !== null) {
+            $elements[] = [
                 'name' => Schema::CBC . 'ChargeTotalAmount',
                 'value' => number_format($this->chargeTotalAmount, 2, '.', ''),
                 'attributes' => ['currencyID' => $currencyID],
-            ],
-            [
+            ];
+        }
+        
+        if ($this->prepaidAmount !== null) {
+            $elements[] = [
                 'name' => Schema::CBC . 'PrepaidAmount',
-                'value' => number_format($this->prepaidAmount ?? 0, 2, '.', ''),
+                'value' => number_format($this->prepaidAmount, 2, '.', ''),
                 'attributes' => ['currencyID' => $currencyID],
-            ],
-            [
+            ];
+        }
+        
+        if ($this->payableAmount !== null) {
+            $elements[] = [
                 'name' => Schema::CBC . 'PayableAmount',
-                'value' => number_format($this->payableAmount ?? 0, 2, '.', ''),
+                'value' => number_format($this->payableAmount, 2, '.', ''),
                 'attributes' => ['currencyID' => $currencyID],
-            ],
-        ]);
+            ];
+        }
+        
+        $writer->write($elements);        
     }
 }

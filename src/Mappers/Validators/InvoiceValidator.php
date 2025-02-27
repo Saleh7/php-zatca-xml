@@ -113,14 +113,14 @@ class InvoiceValidator
             // Validate subTotals if provided.
             if (isset($data['taxTotal']['subTotals']) && is_array($data['taxTotal']['subTotals'])) {
                 foreach ($data['taxTotal']['subTotals'] as $index => $subTotal) {
-                    $subRequired = ['taxableAmount', 'taxAmount', 'percent', 'taxScheme'];
+                    $subRequired = ['taxableAmount', 'taxCategory'];
                     foreach ($subRequired as $field) {
                         if (!isset($subTotal[$field]) || empty($subTotal[$field])) {
                             throw new \InvalidArgumentException("The field 'Tax Total subTotals[{$index}] {$field}' is required and cannot be empty.");
                         }
                     }
                     // Validate taxScheme id in subTotal.
-                    if (!isset($subTotal['taxScheme']['id']) || empty($subTotal['taxScheme']['id'])) {
+                    if (!isset($subTotal['taxCategory']['taxScheme']['id']) || empty($subTotal['taxCategory']['taxScheme']['id'])) {
                         throw new \InvalidArgumentException("The field 'Tax Total subTotals[{$index}] TaxScheme id' is required and cannot be empty.");
                     }
                 }
@@ -155,11 +155,11 @@ class InvoiceValidator
                 if (!isset($line['item']['name']) || empty($line['item']['name'])) {
                     throw new \InvalidArgumentException("The field 'Invoice Lines[{$lineIndex}] Item name' is required and cannot be empty.");
                 }
-                if (!isset($line['item']['taxScheme']) || !isset($line['item']['taxScheme']['id']) || empty($line['item']['taxScheme']['id'])) {
+                if (!isset($line['item']['classifiedTaxCategory'][0]['taxScheme']) || !isset($line['item']['classifiedTaxCategory'][0]['taxScheme']['id']) || empty($line['item']['classifiedTaxCategory'][0]['taxScheme']['id'])) {
                     throw new \InvalidArgumentException("The field 'Invoice Lines[{$lineIndex}] Item TaxScheme id' is required and cannot be empty.");
                 }
-                if (!isset($line['item']['taxPercent']) || $line['item']['taxPercent'] === '') {
-                    throw new \InvalidArgumentException("The field 'Invoice Lines[{$lineIndex}] Item taxPercent' is required and cannot be empty.");
+                if (!isset($line['item']['classifiedTaxCategory'][0]['percent']) || $line['item']['classifiedTaxCategory'][0]['percent'] === '') {
+                    throw new \InvalidArgumentException("The field 'Invoice Lines[{$lineIndex}] Item percent' is required and cannot be empty.");
                 }
                 
                 // Validate price within invoice line.

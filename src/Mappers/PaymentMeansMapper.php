@@ -26,6 +26,7 @@ class PaymentMeansMapper
     public function map(array $data): PaymentMeans
     {
         return (new PaymentMeans())
-            ->setPaymentMeansCode($data['code'] ?? "10");
+            ->setPaymentMeansCode($data['code'] ?? "10")
+            ->setInstructionNote($data['note'] ?? null);
     }
 }

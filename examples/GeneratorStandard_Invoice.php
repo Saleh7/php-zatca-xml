@@ -215,7 +215,7 @@ $invoice = (new Invoice())
 try {
     // Generate the XML (default currency 'SAR')
     // Save the XML to an output file
-    $xmlOutput = GeneratorInvoice::invoice($invoice)->saveXMLFile();
+    $xmlOutput = GeneratorInvoice::invoice($invoice)->saveXMLFile('GeneratorStandard_Invoice.xml');
 
 } catch (\Exception $e) {
     // Log error message and exit

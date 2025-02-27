@@ -3,7 +3,7 @@ namespace Saleh7\Zatca\Mappers;
 
 use DateTime;
 use Saleh7\Zatca\{
-    Invoice, UBLExtensions, Signature, InvoiceType, TaxTotal, LegalMonetaryTotal, Delivery, AllowanceCharge
+    Invoice, UBLExtensions, Signature, InvoiceType, TaxTotal, LegalMonetaryTotal, Delivery, AllowanceCharge, BillingReference
 };
 use Saleh7\Zatca\Mappers\Validators\InvoiceValidator;
 // use Saleh7\Zatca\Mappers\Validators\InvoiceAmountValidator;
@@ -103,6 +103,9 @@ class InvoiceMapper
                 ->setlanguageID($data['languageID'] ?? 'en')
                 ->setInvoiceCurrencyCode($data['currencyCode'] ?? 'SAR')
                 ->setTaxCurrencyCode($data['taxCurrencyCode'] ?? 'SAR')
+                ->setBillingReferences(
+                    $this->mapBillingReferences($data['billingReferences'] ?? [])
+                )
                 ->setAdditionalDocumentReferences(
                     $this->additionalDocumentMapper->mapAdditionalDocuments($data['additionalDocuments'] ?? [])
                 )
@@ -194,6 +197,22 @@ class InvoiceMapper
     }
 
     /**
+     * Map BillingReferences data to an array of BillingReference objects.
+     *
+     * @param array $data Array of billing references data.
+     * @return BillingReference[] Array of mapped BillingReference objects.
+     */
+    private function mapBillingReferences(array $data): array
+    {
+        $billingReferences = [];
+        foreach ($data as $billingData) {
+            $billingReferences[] = (new BillingReference())
+                ->setId($billingData['id'] ?? '');
+        }
+        return $billingReferences;
+    }
+
+    /**
      * Map AllowanceCharge data to an array of AllowanceCharge objects.
      *
      * @param array $data The invoice data containing allowance charges.
@@ -202,19 +221,34 @@ class InvoiceMapper
     private function mapAllowanceCharge(array $data): array
     {
         $allowanceCharges = [];
+        // Check if allowanceCharges is an array.
+        if (!isset($data['allowanceCharges']) || !is_array($data['allowanceCharges'])) {
+            return $allowanceCharges;
+        }
+        // Iterate over each allowance charge in the data.
         foreach ($data['allowanceCharges'] as $allowanceCharge) {
-            $taxCategory = (new \Saleh7\Zatca\TaxCategory())
-                ->setPercent($allowanceCharge['taxCategories']['percent'] ?? 15)
-                ->setTaxScheme(
-                    (new \Saleh7\Zatca\TaxScheme())
-                        ->setId($allowanceCharge['taxCategories']['taxScheme']['id'] ?? "VAT")
-                );
-            $allowanceCharges[] = (new AllowanceCharge())
+            $taxCategories = [];
+            
+            // Check if taxCategories is an array and iterate over it.
+            if (isset($allowanceCharge['taxCategories']) && is_array($allowanceCharge['taxCategories'])) {
+                foreach ($allowanceCharge['taxCategories'] as $taxCatData) {
+                    $taxCategories[] = (new \Saleh7\Zatca\TaxCategory())
+                        ->setPercent($taxCatData['percent'] ?? 15)
+                        ->setTaxScheme(
+                            (new \Saleh7\Zatca\TaxScheme())
+                                ->setId($taxCatData['taxScheme']['id'] ?? "VAT")
+                        );
+                }
+            }
+            
+            // Create the AllowanceCharge object with its tax categories.
+            $allowanceCharges[] = (new \Saleh7\Zatca\AllowanceCharge())
                 ->setChargeIndicator($allowanceCharge['isCharge'] ?? false)
                 ->setAllowanceChargeReason($allowanceCharge['reason'] ?? 'discount')
                 ->setAmount($allowanceCharge['amount'] ?? 0.00)
-                ->setTaxCategory([$taxCategory]);
+                ->setTaxCategory($taxCategories);
         }
+        
         return $allowanceCharges;
     }
 
@@ -241,20 +275,36 @@ class InvoiceMapper
     {
         $taxTotal = new TaxTotal();
         $taxTotal->setTaxAmount($data['taxAmount'] ?? 0);
-        if (isset($data['subTotals'])) {
+        if (isset($data['subTotals']) && is_array($data['subTotals'])) {
             foreach ($data['subTotals'] as $subTotal) {
+                // Extract tax category data from subTotal.
+                $taxCategoryData = $subTotal['taxCategory'] ?? [];
+                $percent = $taxCategoryData['percent'] ?? 15;
+                $reasonCode = $taxCategoryData['reasonCode'] ?? null;
+                $reason = $taxCategoryData['reason'] ?? null;
+                
+                // Build the TaxScheme object.
+                $taxSchemeData = $taxCategoryData['taxScheme'] ?? [];
                 $taxScheme = (new \Saleh7\Zatca\TaxScheme())
-                    ->setId($subTotal['taxScheme']['id'] ?? "VAT");
+                    ->setId($taxSchemeData['id'] ?? "VAT");
+                
+                // Build the TaxCategory object using the extracted data.
                 $taxCategory = (new \Saleh7\Zatca\TaxCategory())
-                    ->setPercent($subTotal['percent'] ?? 15)
+                    ->setPercent($percent)
+                    ->setTaxExemptionReasonCode($reasonCode)
+                    ->setTaxExemptionReason($reason)
                     ->setTaxScheme($taxScheme);
+                
+                // Create the TaxSubTotal object.
                 $taxSubTotal = (new \Saleh7\Zatca\TaxSubTotal())
                     ->setTaxableAmount($subTotal['taxableAmount'] ?? 0)
                     ->setTaxAmount($subTotal['taxAmount'] ?? 0)
                     ->setTaxCategory($taxCategory);
+                
                 $taxTotal->addTaxSubTotal($taxSubTotal);
             }
         }
+        
         return $taxTotal;
     }
 
