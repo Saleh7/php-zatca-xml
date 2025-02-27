@@ -79,8 +79,14 @@ class InvoiceValidatorTest extends TestCase
                     'lineExtensionAmount'=> 200, // 100 * 2 = 200
                     'item' => [
                         'name'        => 'Product A',
-                        'taxPercent'  => 15,
-                        'taxScheme'   => ['id' => 'VAT']
+                        'classifiedTaxCategory' => [
+                            [
+                                'percent' => 15,
+                                'taxScheme' => [
+                                    'id' => 'VAT'
+                                ]
+                            ]
+                        ],
                     ],
                     'price' => [
                         'amount'      => 100,
@@ -154,12 +160,18 @@ class InvoiceValidatorTest extends TestCase
                     'lineExtensionAmount'=> 200,
                     'item' => [
                         'name'        => 'Product A',
-                        'taxPercent'  => 15,
-                        'taxScheme'   => ['id' => 'VAT']
+                        'classifiedTaxCategory' => [
+                            [
+                                'percent' => 15,
+                                'taxScheme' => [
+                                    'id' => 'VAT'
+                                ]
+                            ]
+                        ],
                     ],
                     'price' => [
                         'amount'      => 100,
-                        'unitCode'    => 'PCE'
+                        'unitCode'    => 'PCE',
                     ],
                     'taxTotal' => [
                         'taxAmount'     => 30,

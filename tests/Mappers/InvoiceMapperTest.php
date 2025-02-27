@@ -124,9 +124,11 @@ class InvoiceMapperTest extends TestCase
                     [
                         'taxableAmount' => 4,
                         'taxAmount' => 0.6,
-                        'percent' => 15,
-                        'taxScheme' => [
-                            'id' => 'VAT'
+                        'taxCategory' => [
+                            'percent' => 15,
+                            'taxScheme' => [
+                                'id' => 'VAT'
+                            ]
                         ]
                     ]
                 ]
@@ -147,10 +149,14 @@ class InvoiceMapperTest extends TestCase
                     'lineExtensionAmount' => 4,
                     'item' => [
                         'name' => 'Product',
-                        'taxPercent' => 15,
-                        'taxScheme' => [
-                            'id' => 'VAT'
-                        ]
+                        'classifiedTaxCategory' => [
+                            [
+                                'percent' => 15,
+                                'taxScheme' => [
+                                    'id' => 'VAT'
+                                ]
+                            ]
+                        ],
                     ],
                     'price' => [
                         'amount' => 2,

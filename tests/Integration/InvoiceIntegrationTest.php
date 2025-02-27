@@ -104,8 +104,12 @@ class InvoiceIntegrationTest extends TestCase
                     [
                         'taxableAmount' => 200,
                         'taxAmount' => 30,
-                        'percent' => 15,
-                        'taxScheme' => ['id' => 'VAT']
+                        'taxCategory' => [
+                            'percent' => 15,
+                            'taxScheme' => [
+                                'id' => 'VAT'
+                            ]
+                        ]
                     ]
                 ]
             ],
@@ -124,8 +128,14 @@ class InvoiceIntegrationTest extends TestCase
                     'lineExtensionAmount' => 200, // Calculated: 100 * 2 = 200
                     'item' => [
                         'name' => 'Product A',
-                        'taxPercent' => 15,
-                        'taxScheme' => ['id' => 'VAT']
+                        'classifiedTaxCategory' => [
+                            [
+                                'percent' => 15,
+                                'taxScheme' => [
+                                    'id' => 'VAT'
+                                ]
+                            ]
+                        ],
                     ],
                     'price' => [
                         'amount' => 100,
