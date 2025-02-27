@@ -5,7 +5,7 @@ use DateTime;
 use Saleh7\Zatca\{
     Invoice, UBLExtensions, Signature, InvoiceType, TaxTotal, LegalMonetaryTotal, Delivery, AllowanceCharge
 };
-// use Saleh7\Zatca\Mappers\Validators\InvoiceValidator;
+use Saleh7\Zatca\Mappers\Validators\InvoiceValidator;
 // use Saleh7\Zatca\Mappers\Validators\InvoiceAmountValidator;
 
 /**
@@ -81,12 +81,14 @@ class InvoiceMapper
             }
         }
 
-        // Optionally, validate the required invoice fields here.
-        // $validator = new InvoiceValidator();
-        // $validator->validate($data);
-        // $validator2 = new InvoiceAmountValidator();
-        // $validator2->validateMonetaryTotals($data);
-        // $validator2->validateInvoiceLines($data['invoiceLines']);
+        // Optionally, Validate the required invoice fields
+        $validator = new InvoiceValidator();
+        $validator->validate($data);
+
+        // // Optionally, validate the invoice amounts and lines.
+        // $validatorAmount = new InvoiceAmountValidator();
+        // $validatorAmount->validateMonetaryTotals($data);
+        // $validatorAmount->validateInvoiceLines($data['invoiceLines']);
 
         $invoice = new Invoice();
 
