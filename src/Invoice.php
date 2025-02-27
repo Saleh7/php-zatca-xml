@@ -365,16 +365,14 @@ class Invoice implements XmlSerializable
     /**
      * Set note.
      *
-     * @param string $note
+     * @param string|null $note
      * @return self
-     * @throws InvalidArgumentException if note is empty.
      */
-    public function setNote(string $note): self
+    public function setNote(?string $note): self
     {
-        if (trim($note) === '') {
-            throw new InvalidArgumentException('Note cannot be empty.');
+        if ($note !== null) {
+            $this->note = $note;
         }
-        $this->note = $note;
         return $this;
     }
     public function setlanguageID(string $languageID = 'en'): self
