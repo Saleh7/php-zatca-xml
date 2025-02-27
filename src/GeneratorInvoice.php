@@ -3,7 +3,7 @@ namespace Saleh7\Zatca;
 
 use Sabre\Xml\Service;
 use Saleh7\Zatca\Exceptions\ZatcaStorageException;
-
+use DOMDocument;
 /**
  * Class GeneratorInvoice
  *
@@ -40,12 +40,37 @@ class GeneratorInvoice
             'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2' => 'ext'
         ];
 
-        // Store generated XML inside the instance
-        $instance->generatedXml = $xmlService->write('Invoice', [$invoice]);
+        // Serialize the invoice object to XML.
+        $rawXml = $xmlService->write('Invoice', [$invoice]);
+
+        // Format the XML using the dedicated formatting function.
+        $instance->generatedXml = self::formatXml($rawXml);
 
         return $instance;
     }
 
+    /**
+     * Format XML with proper indentation and convert 2-space indentation to 4-space indentation.
+     *
+     * @param string $xml Unformatted XML string.
+     * @return string Formatted XML string.
+     */
+    private static function formatXml(string $xml): string
+    {
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML($xml);
+        $dom->encoding = 'UTF-8';
+        $formattedXml = $dom->saveXML();
+
+        // Convert 2-space indentation to 4-space indentation.
+        $formattedXml = preg_replace_callback('/^([ ]+)/m', function ($matches) {
+            return str_repeat('    ', strlen($matches[1]) / 2);
+        }, $formattedXml);
+
+        return $formattedXml;
+    }
     /**
      * Saves the generated invoice as an XML file.
      *
