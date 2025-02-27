@@ -27,8 +27,8 @@ class Item implements XmlSerializable
     /** @var string|null Sellers item identification. */
     private ?string $sellersItemIdentification = null;
 
-    /** @var ClassifiedTaxCategory|null Classified tax category. */
-    private ?ClassifiedTaxCategory $classifiedTaxCategory = null;
+    /** @var array|null Classified tax category. */
+    private ?array $classifiedTaxCategory = [];
 
     /**
      * Set the item description.
@@ -159,10 +159,10 @@ class Item implements XmlSerializable
     /**
      * Set the classified tax category.
      *
-     * @param ClassifiedTaxCategory|null $classifiedTaxCategory
+     * @param array|null $classifiedTaxCategory
      * @return self
      */
-    public function setClassifiedTaxCategory(?ClassifiedTaxCategory $classifiedTaxCategory): self
+    public function setClassifiedTaxCategory(?array $classifiedTaxCategory): self
     {
         $this->classifiedTaxCategory = $classifiedTaxCategory;
         return $this;
@@ -171,9 +171,9 @@ class Item implements XmlSerializable
     /**
      * Get the classified tax category.
      *
-     * @return ClassifiedTaxCategory|null
+     * @return array|null
      */
-    public function getClassifiedTaxCategory(): ?ClassifiedTaxCategory
+    public function getClassifiedTaxCategory(): ?array
     {
         return $this->classifiedTaxCategory;
     }
@@ -227,9 +227,11 @@ class Item implements XmlSerializable
 
         // Write ClassifiedTaxCategory element if provided.
         if (!empty($this->classifiedTaxCategory)) {
-            $writer->write([
-                Schema::CAC . 'ClassifiedTaxCategory' => $this->classifiedTaxCategory,
-            ]);
+            foreach($this->classifiedTaxCategory as $classifiedTaxCategory){
+                $writer->write([
+                    Schema::CAC . 'ClassifiedTaxCategory' => $classifiedTaxCategory
+                ]);
+            }
         }
     }
 }
