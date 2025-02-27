@@ -131,7 +131,7 @@ class ZatcaAPI
         try {
             return $this->sendRequest(
                 'POST',
-                'compliance/invoices',
+                '/compliance/invoices',
                 ['Accept-Language' => 'en', 'Content-Type' => 'application/json'],
                 [
                     'invoiceHash' => $invoiceHash,
@@ -162,7 +162,7 @@ class ZatcaAPI
     ): ProductionCertificateResult {
         $response = $this->sendRequest(
             'POST',
-            'production/csids',
+            '/production/csids',
             ['Content-Type' => 'application/json'],
             ['compliance_request_id' => $complianceRequestId],
             $this->createAuthHeaders($certificate, $secret)
@@ -195,7 +195,7 @@ class ZatcaAPI
     ): array {
         return $this->sendRequest(
             'POST',
-            'invoices/clearance/single',
+            '/invoices/clearance/single',
             ['Clearance-Status' => '1', 'Accept-Language' => 'en'],
             [
                 'invoiceHash' => $invoiceHash,
