@@ -345,7 +345,7 @@ class InvoiceExtension
             new InvoiceTaxAmount($this->find("cac:TaxTotal")->toText()),
             new InvoiceHash($invoiceDigest),
             new InvoiceDigitalSignature($signatureValue),
-            new PublicKey(base64_decode($certificate->getRawPublicKey()))
+            new PublicKey($this->getCleanCertificatePublicKey($certificate->getRawPublicKey()))
         ];
 
         // For Simplified Tax Invoices, add the certificate signature.
@@ -384,5 +384,21 @@ class InvoiceExtension
     public function __toString(): string
     {
         return $this->toXml(null, 'UTF-8', false);
+    }
+
+
+    private function getCleanCertificatePublicKey($certPublicKey): string
+    {
+        // If it's already binary, return as-is
+        if (!is_string($certPublicKey) || !preg_match('/^[A-Za-z0-9+\/=\s]+$/', $certPublicKey)) {
+            return $certPublicKey;
+        }
+
+        // Clean base64 string
+        $cleaned = preg_replace('/\s+/', '', $certPublicKey);
+        $cleaned = preg_replace('/[^A-Za-z0-9+\/=]/', '', $cleaned);
+
+        // Decode to binary
+        return base64_decode($cleaned);
     }
 }
