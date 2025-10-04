@@ -51,8 +51,10 @@ class CustomerMapper
 
         // Map the PartyTaxScheme for the customer.
         $partyTaxScheme = (new PartyTaxScheme())
-            ->setTaxScheme($taxScheme)
-            ->setCompanyId($data['taxId'] ?? '');
+            ->setTaxScheme($taxScheme);
+        if (isset($data['taxId']) && $data['taxId'] != '') {
+            $partyTaxScheme->setCompanyId($data['taxId'] ?? '');
+        }
 
         // Map the Address for the customer.
         $address = (new Address())
