@@ -118,7 +118,7 @@ class InvoiceSignatureBuilder
         $propsReference->addChild('ds:DigestMethod', null, [
             'Algorithm' => "http://www.w3.org/2001/04/xmlenc#sha256",
         ]);
-        $propsReference->addChild('ds:DigestValue', base64_encode(hash('sha256', $signedPropertiesXml)));
+        $propsReference->addChild('ds:DigestValue', base64_encode(hash('sha256', $signedPropertiesXml, true)));
 
         // Add the signature value.
         $dsSignature->addChild('ds:SignatureValue', $this->signatureValue);
