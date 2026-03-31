@@ -1,7 +1,6 @@
 <p align="center">
-    <img src="https://i.imgur.com/hLSMzHU.png"  alt="php-zatca-xml">
+    <img src="https://i.imgur.com/hLSMzHU.png" alt="php-zatca-xml">
 </p>
-
 
 <p align="center">
 <img src="https://badgen.net/packagist/php/saleh7/php-zatca-xml" alt="php Version">
@@ -11,354 +10,276 @@
 <a href="https://packagist.org/packages/saleh7/php-zatca-xml"><img alt="License" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 </p>
 
-
 <p align="center">
-Please feel free to <a href="https://github.com/Saleh7/php-zatca-xml/pulls?q=sort%3Aupdated-desc+is%3Apr+is%3Aopen"><strong>contribute</strong></a> if you are missing features or tags
-<br />
-<a href="https://github.com/Saleh7/php-zatca-xml/tree/main/examples">View Examples</a>
-·
-<a href="https://github.com/Saleh7/php-zatca-xml/issues">Report a bug</a>
-·
-<a href="https://github.com/Saleh7/php-zatca-xml/issues">Request a feature</a>
-·
-<a href="https://github.com/Saleh7/php-zatca-xml/discussions">Ask questions</a>
+<a href="https://github.com/Saleh7/php-zatca-xml/tree/main/examples">View Examples</a> · <a href="https://github.com/Saleh7/php-zatca-xml/issues">Report a bug</a> · <a href="https://github.com/Saleh7/php-zatca-xml/discussions">Discussions</a>
 </p>
 
-## 📖 Introduction  
+> ✅ **Production Tested** — Full onboarding flow (CSR → Compliance → 6 Invoice Types → Production Certificate → Invoice Reporting) successfully tested against ZATCA production API on **March 31, 2026** using **Ubuntu 24.04 / PHP 8.4**.
 
-**PHP-ZATCA-XML** is an unofficial PHP library for generating **ZATCA Fatoora** e-invoices. It simplifies the process of creating compliant e-invoices, generating QR codes, handling certificates, and submitting invoices to **ZATCA’s servers**.  
+## Introduction
 
-Designed for **easy integration**, this library provides developers with a **customizable, robust, and efficient toolkit** to automate the ZATCA e-invoicing process in PHP applications.
+**PHP-ZATCA-XML** is a PHP library for generating ZATCA-compliant e-invoices (Fatoora). It handles the full lifecycle: certificate generation, XML invoice creation, digital signing, QR codes, and API submission to ZATCA.
 
-## 🚀 Planned Features  
+Built to match the official **ZATCA Java SDK (R3.4.8)** specifications: secp256k1 keys, SHA256withECDSA signatures, UBL 2.1 XML, and all three environment tiers.
 
-We are actively working on expanding the capabilities of this library. If you're a developer and would like to contribute, your help is highly appreciated! 💡  
+## Features
 
-- [ ] **XML to JSON Conversion** – Support for converting invoices from XML to JSON format.  
-- [ ] **JSON/Array to Invoice** – Ability to generate invoices directly from JSON or array structures.  
-- [ ] **Simplified Invoice Creation** – Streamlined generation of **Simplified Invoices**, **Debit**, and **Credit** compliant with ZATCA simplified.  
-- [ ] **Standard Invoice Creation** – Streamlined generation **Standard Invoices**, **Debit**, and **Credit** compliant with ZATCA standards.  
-- [ ] **Invoice to PDF Conversion** – Generate PDF versions of invoices for easy sharing and record-keeping.  
+- **Certificate Builder** aligned with ZATCA SDK (CSR generation, secp256k1, proper DN order, Arabic support)
+- **Invoice Generation** for Standard and Simplified invoices (Invoice, Credit Note, Debit Note)
+- **Digital Signing** with XAdES-BES enveloped signatures
+- **QR Code Generation** per ZATCA TLV specification
+- **Full API Client** covering all 6 ZATCA endpoints (compliance, production, reporting, clearance, renewal)
+- **Response Objects** with typed accessors for validation results, warnings, and errors
+- **Data Mapper** to build invoices from arrays/JSON (e-commerce integration)
 
-💡 **Got an idea?** Feel free to suggest it or contribute!  
- Let's build something great together! 🚀  
+## Requirements
 
-## ✨ Features  
+- PHP 8.1+
+- Extensions: `ext-dom`, `ext-openssl`, `ext-hash`, `ext-mbstring`
 
-- 🚀 **ZATCA-Compliant** – Easily generate valid e-invoices for ZATCA regulations  
-- 📜 **Invoice Creation** – Generate standard and simplified invoices in XML format  
-- 🔐 **Digital Signing** – Sign invoices securely to ensure compliance  
-- 🏷 **QR Code Generation** – Automatically generate QR codes for invoices  
-- 📡 **Direct Submission to ZATCA** – Send invoices directly to ZATCA’s servers  
-- ⚡ **Lightweight & Fast** – Optimized for performance and easy integration in PHP projects  
-- 🔄 **Customizable & Extensible** – Easily adapt the library to your needs  
-
-
-## 📌 Requirements  
-
-### ✅ PHP Version  
-- **PHP 8.1 or higher**
-
-### ✅ Required PHP Extensions  
-Ensure the following PHP extensions are installed and enabled:  
-- **`ext-dom`**
-- **`ext-libxml`**
-- **`ext-openssl`**
-- **`ext-hash`**
-- **`ext-mbstring`**
-
-
-## 🛠 Installation  
+## Installation
 
 ```bash
 composer require saleh7/php-zatca-xml
 ```
 
-## 🚀 Usage  
+## Quick Start: Production Onboarding
 
-This library simplifies the process of generating **ZATCA-compliant** e-invoices, handling **certificates**, signing invoices, and submitting them to **ZATCA’s API**. Below are the main usage examples:
+The full ZATCA onboarding flow in 4 steps:
 
----
+### Step 1: Generate CSR + Private Key
 
-### 📜 **1. Generating a Compliance Certificate**  
-
-First, generate a **certificate signing request (CSR)** and private key:  
+> 📄 Full example: [`examples/Certificates/GeneratorCertificate.php`](examples/Certificates/GeneratorCertificate.php)
 
 ```php
 use Saleh7\Zatca\CertificateBuilder;
-use Saleh7\Zatca\Exceptions\CertificateBuilderException;
 
-try {
-    (new CertificateBuilder())
-        ->setOrganizationIdentifier('312345678901233') // The Organization Identifier must be 15 digits, starting andending with 3
-        // string $solutionName .. The solution provider name
-        // string $model .. The model of the unit the stamp is being generated for
-        // string $serialNumber .. # If you have multiple devices each should have a unique serial number
-        ->setSerialNumber('Saleh', '1n', 'SME00023')
-        ->setCommonName('My Organization') // The common name to be used in the certificate
-        ->setCountryName('SA') // The Country name must be Two chars only
-        ->setOrganizationName('My Company') // The name of your organization
-        ->setOrganizationalUnitName('IT Department') // A subunit in your organizatio
-        ->setAddress('Riyadh 1234 Street') // like Riyadh 1234 Street 
-        ->setInvoiceType(1100)// # Four digits, each digit acting as a bool. The order is as follows: Standard Invoice, Simplified, future use, future use 
-        ->setProduction(false)// true = Production |  false = Testing
-        ->setBusinessCategory('Technology') // Your business category like food, real estate, etc
-        
-        ->generateAndSave('output/certificate.csr', 'output/private.pem');
-        
-    echo "Certificate and private key saved.\n";
-} catch (CertificateBuilderException $e) {
-    echo "Error: " . $e->getMessage() . "\n";
-    exit(1);
-}
+(new CertificateBuilder)
+    ->setOrganizationIdentifier('3XXXXXXXXXXXXX3')   // 15-digit VAT number
+    ->setSerialNumber('ERP', '1.0', 'unique-device-uuid')
+    ->setCommonName('ERP-886431145-3XXXXXXXXXXXXX3')
+    ->setCountryName('SA')
+    ->setOrganizationName('Your Company Name')       // Arabic supported
+    ->setOrganizationalUnitName('Branch Name')
+    ->setAddress('RRRD2929')
+    ->setInvoiceType('1100')                         // Standard + Simplified
+    ->setEnvironment(CertificateBuilder::ENV_PRODUCTION)
+    ->setBusinessCategory('Supply activities')
+    ->generateAndSave('output/certificate.csr', 'output/private.pem');
 ```
 
-### 🔐 **2. Requesting a Compliance Certificate from ZATCA**  
+**Environment options:**
+- `ENV_PRODUCTION` → `ZATCA-Code-Signing` (live)
+- `ENV_NONPROD` → `TSTZATCA-Code-Signing` (sandbox/test)
+- `ENV_SIMULATION` → `PREZATCA-Code-Signing` (pre-production)
 
-Once the CSR is generated, you need to request a **compliance certificate** from **ZATCA's API**.  
+### Step 2: Request Compliance Certificate (CCSID)
+
+> 📄 Full example: [`examples/Certificates/RequestComplianceCertificate.php`](examples/Certificates/RequestComplianceCertificate.php)
+
+Get an OTP from [fatoora.zatca.gov.sa](https://fatoora.zatca.gov.sa), then:
 
 ```php
 use Saleh7\Zatca\ZatcaAPI;
-use Saleh7\Zatca\Exceptions\ZatcaApiException;
 
-$zatcaClient = new ZatcaAPI('sandbox');
+$api = new ZatcaAPI('production'); // or 'sandbox', 'simulation'
+$csr = file_get_contents('output/certificate.csr');
 
-try {
-    $otp = "123123"; // The OTP received from ZATCA
-    $certificatePath = __DIR__ . '/output/certificate.csr';
-    
-    // Load the generated CSR
-    $csr = $zatcaClient->loadCSRFromFile($certificatePath);
-    
-    // Request the compliance certificate from ZATCA
-    $complianceResult = $zatcaClient->requestComplianceCertificate($csr, $otp);
-    
-    // Display the returned certificate and API secret
-    echo "Compliance Certificate:\n" . $complianceResult->getCertificate() . "\n";
-    echo "API Secret: " . $complianceResult->getSecret() . "\n";
-    echo "Request ID: " . $complianceResult->getRequestId() . "\n";
+$result = $api->requestComplianceCertificate($csr, $otp);
 
-    // Save the certificate details to a JSON file
-    $outputFile = __DIR__ . '/output/ZATCA_certificate_data.json';
-    $zatcaClient->saveToJson(
-        $complianceResult->getCertificate(),
-        $complianceResult->getSecret(),
-        $complianceResult->getRequestId(),
-        $outputFile
-    );
-    
-    echo "Certificate data saved to {$outputFile}\n";
-
-} catch (ZatcaApiException $e) {
-    echo "API Error: " . $e->getMessage();
-} catch (\Exception $e) {
-    echo "Error: " . $e->getMessage();
-}
+$api->saveToJson(
+    $result->getCertificate(),
+    $result->getSecret(),
+    $result->getRequestId(),
+    'output/compliance_credentials.json'
+);
 ```
 
-### 🧾 **3. Generating an Invoice XML**  
+### Step 3: Compliance Check (6 Invoice Types)
 
-Now that we have the compliance certificate, we can generate a **ZATCA-compliant e-invoice in XML format**.
+> 📄 Full automated example: [`examples/Certificates/ComplianceCheck.php`](examples/Certificates/ComplianceCheck.php)
+
+Submit 6 test invoices to pass compliance validation:
 
 ```php
-use Saleh7\Zatca\{
-    SignatureInformation, UBLDocumentSignatures, ExtensionContent, UBLExtension, UBLExtensions, Signature, 
-    InvoiceType, AdditionalDocumentReference, TaxScheme, PartyTaxScheme, Address, LegalEntity, Delivery, 
-    Party, PaymentMeans, TaxCategory, AllowanceCharge, TaxSubTotal, TaxTotal, LegalMonetaryTotal, 
-    ClassifiedTaxCategory, Item, Price, InvoiceLine, GeneratorInvoice, Invoice, UnitCode, 
-    OrderReference, BillingReference, Contract, Attachment, Storage
-};
+$creds = json_decode(file_get_contents('output/compliance_credentials.json'), true);
 
-// --- Invoice Type ---
-$invoiceType = (new InvoiceType())
-    ->setInvoice('standard') // 'standard' or 'simplified'
-    ->setInvoiceType('invoice') // 'invoice', 'debit', or 'credit', 'prepayment'
-    ->setIsThirdParty(false) // Third-party transaction
-    ->setIsNominal(false) // Nominal transaction
-    ->setIsExportInvoice(false) // Export invoice
-    ->setIsSummary(false) // Summary invoice
-    ->setIsSelfBilled(false); // Self-billed invoice
+$response = $api->validateInvoiceCompliance(
+    $creds['certificate'],
+    $creds['secret'],
+    $signedInvoiceXml,
+    $invoiceHash,
+    $uuid
+);
 
-// --- Supplier & Customer Information ---
-$taxScheme = (new TaxScheme())->setId("VAT");
-
-$partyTaxSchemeSupplier = (new PartyTaxScheme())->setTaxScheme($taxScheme)->setCompanyId('311111111101113');
-$partyTaxSchemeCustomer = (new PartyTaxScheme())->setTaxScheme($taxScheme);
-
-$address = (new Address())
-    ->setStreetName('Prince Sultan Street')
-    ->setBuildingNumber("2322")
-    ->setPlotIdentification("2223")
-    ->setCitySubdivisionName('Riyadh')
-    ->setCityName('Riyadh')
-    ->setPostalZone('23333')
-    ->setCountry('SA');
-
-// --- Delivery ---
-$delivery = (new Delivery())->setActualDeliveryDate(date('Y-m-d'));
-
-// --- Additional Document References ---
-$additionalDocs = [];
-$additionalDocs[] = (new AdditionalDocumentReference())
-    ->setId('ICV')
-    ->setUUID("23"); //Invoice counter value
-$additionalDocs[] = (new AdditionalDocumentReference())
-    ->setId('PIH')
-    ->setAttachment($attachment); // Previous Invoice Hash
-    // ->setPreviousInvoiceHash('NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjcyOWQ3M2EyN2ZiNTdlOQ=='); // Previous Invoice Hash
-$additionalDocs[] = (new AdditionalDocumentReference())
-    ->setId('QR');
-
-$legalEntity = (new LegalEntity())->setRegistrationName('Acme Widget’s LTD');
-
-$supplierCompany = (new Party())
-    ->setPartyIdentification("311111111111113")
-    ->setPartyIdentificationId("CRN")
-    ->setLegalEntity($legalEntity)
-    ->setPartyTaxScheme($partyTaxSchemeSupplier)
-    ->setPostalAddress($address);
-
-$supplierCustomer = (new Party())
-    ->setPartyIdentification("311111111111113")
-    ->setPartyIdentificationId("NAT")
-    ->setLegalEntity($legalEntity)
-    ->setPartyTaxScheme($partyTaxSchemeCustomer)
-    ->setPostalAddress($address);
-
-// --- Invoice Items & Pricing ---
-$classifiedTax = (new ClassifiedTaxCategory())->setPercent(15)->setTaxScheme($taxScheme);
-$productItem = (new Item())->setName('Pencil')->setClassifiedTaxCategory($classifiedTax);
-$price = (new Price())->setUnitCode(UnitCode::UNIT)->setPriceAmount(2);
-
-$lineTaxTotal = (new TaxTotal())->setTaxAmount(0.60)->setRoundingAmount(4.60);
-
-$invoiceLine = (new InvoiceLine())
-    ->setUnitCode("PCE")
-    ->setId(1)
-    ->setItem($productItem)
-    ->setLineExtensionAmount(4)
-    ->setPrice($price)
-    ->setTaxTotal($lineTaxTotal)
-    ->setInvoicedQuantity(2);
-
-$invoiceLines = [$invoiceLine];
-
-// --- Tax Totals ---
-$taxCategory = (new TaxCategory)
-    ->setPercent(15)
-    ->setTaxScheme($taxScheme);
-$taxSubTotal = (new TaxSubTotal)
-    ->setTaxableAmount(4)
-    ->setTaxAmount(0.6)
-    ->setTaxCategory($taxCategory);
-$taxTotal = (new TaxTotal)
-    ->addTaxSubTotal($taxSubTotal)
-    ->setTaxAmount(0.6);
-
-// --- Legal Monetary Total ---
-$legalMonetaryTotal = (new LegalMonetaryTotal())
-    ->setLineExtensionAmount(4)
-    ->setTaxExclusiveAmount(4)
-    ->setTaxInclusiveAmount(4.60)
-    ->setPrepaidAmount(0)
-    ->setPayableAmount(4.60)
-    ->setAllowanceTotalAmount(0);
-
-// --- Build the Invoice ---
-$invoice = (new Invoice())
-    ->setUUID('3cf5ee18-ee25-44ea-a444-2c37ba7f28be')
-    ->setId('SME00023')
-    ->setIssueDate(new DateTime())
-    ->setIssueTime(new DateTime())
-    ->setInvoiceType($invoiceType)
-    ->setInvoiceCurrencyCode('SAR')
-    ->setTaxCurrencyCode('SAR')
-    ->setDelivery($delivery)
-    ->setAccountingSupplierParty($supplierCompany)
-    ->setAccountingCustomerParty($supplierCustomer)
-    ->setAdditionalDocumentReferences($additionalDocs)
-    ->setTaxTotal($taxTotal)
-    ->setLegalMonetaryTotal($legalMonetaryTotal)
-    ->setInvoiceLines($invoiceLines);
-    // ......
-// --- Generate XML ---
-try {
-    $generatorXml = GeneratorInvoice::invoice($invoice);
-    $outputXML = $generatorXml->getXML();
-    
-    // Save the XML to a file
-    $filePath = __DIR__ . '/output/unsigned_invoice.xml';
-    (new Storage)->put($filePath, $outputXML);
-    
-    echo "Invoice XML saved to: " . $filePath . "\n";
-
-} catch (\Exception $e) {
-    echo "An error occurred: " . $e->getMessage() . "\n";
-    exit(1);
+if ($response->isSuccess()) {
+    echo "PASS: " . $response->getValidationStatus();
 }
 ```
 
-### ✍️ **4. Signing the Invoice XML**  
+Required types: Standard Invoice, Standard Credit Note, Standard Debit Note, Simplified Invoice, Simplified Credit Note, Simplified Debit Note.
 
-Before submitting the invoice to **ZATCA**, we need to **digitally sign** it using the **compliance certificate** obtained earlier.
+> See [`examples/Certificates/ComplianceCheck.php`](examples/Certificates/ComplianceCheck.php) for an automated script that generates, signs, and submits all 6 types.
+
+### Step 4: Request Production Certificate (PCSID)
+
+> 📄 Included automatically in [`examples/Certificates/ComplianceCheck.php`](examples/Certificates/ComplianceCheck.php)
+
+After all 6 invoices pass:
+
+```php
+$prodResult = $api->requestProductionCertificate(
+    $creds['certificate'],
+    $creds['secret'],
+    $creds['requestId']
+);
+
+$api->saveToJson(
+    $prodResult->getCertificate(),
+    $prodResult->getSecret(),
+    $prodResult->getRequestId(),
+    'output/production_credentials.json'
+);
+```
+
+## Submitting Invoices
+
+### Reporting (B2C / Simplified)
+
+> 📄 Full example: [`examples/InvoiceSimplified/simplified_invoice.php`](examples/InvoiceSimplified/simplified_invoice.php)
+
+```php
+$prod = json_decode(file_get_contents('output/production_credentials.json'), true);
+
+$response = $api->submitReportingInvoice(
+    $prod['certificate'], $prod['secret'],
+    $signedXml, $invoiceHash, $uuid
+);
+
+$response->isReported();         // true if REPORTED
+$response->getReportingStatus(); // "REPORTED"
+$response->getValidationStatus();
+$response->getWarningMessages();
+$response->getErrorMessages();
+```
+
+### Clearance (B2B / Standard)
+
+> 📄 Full example: [`examples/InvoiceStandard/standard_invoice.php`](examples/InvoiceStandard/standard_invoice.php)
+
+```php
+$response = $api->submitClearanceInvoice(
+    $prod['certificate'], $prod['secret'],
+    $signedXml, $invoiceHash, $uuid
+);
+
+$response->isCleared();                // true if CLEARED
+$response->getClearedInvoice();        // Base64 stamped invoice
+$response->getDecodedClearedInvoice(); // XML string
+```
+
+### Certificate Renewal
+
+```php
+$renewed = $api->renewProductionCertificate(
+    $prod['certificate'], $prod['secret'],
+    $newCsr, $otp
+);
+```
+
+## Invoice Generation
+
+### From Array (e-commerce integration)
+
+```php
+use Saleh7\Zatca\Mappers\InvoiceMapper;
+use Saleh7\Zatca\GeneratorInvoice;
+
+$invoiceData = [
+    'uuid'            => '3cf5ee18-ee25-44ea-a444-2c37ba7f28be',
+    'id'              => 'INV-001',
+    'issueDate'       => '2025-01-15',
+    'issueTime'       => '14:30:00',
+    'currencyCode'    => 'SAR',
+    'taxCurrencyCode' => 'SAR',
+    'invoiceType'     => [
+        'invoice' => 'simplified',  // or 'standard'
+        'type'    => 'invoice',     // 'invoice', 'credit', or 'debit'
+    ],
+    'supplier' => [
+        'registrationName' => 'Your Company',
+        'taxId'            => '3XXXXXXXXXXXXX3',
+        'identificationId' => 'XXXXXXXXXX',
+        'identificationType' => 'CRN',
+        'address' => [
+            'street' => 'Main Street', 'buildingNumber' => '1234',
+            'subdivision' => 'District', 'city' => 'Riyadh',
+            'postalZone' => '12345', 'country' => 'SA',
+        ],
+    ],
+    'invoiceLines' => [
+        [
+            'id' => 1, 'unitCode' => 'PCE', 'quantity' => 2,
+            'lineExtensionAmount' => 200,
+            'item' => [
+                'name' => 'Product Name',
+                'classifiedTaxCategory' => [['percent' => 15, 'taxScheme' => ['id' => 'VAT']]],
+            ],
+            'price' => ['amount' => 100, 'unitCode' => 'UNIT'],
+            'taxTotal' => ['taxAmount' => 30, 'roundingAmount' => 230],
+        ],
+    ],
+    // ... taxTotal, legalMonetaryTotal, etc.
+];
+
+$invoice = (new InvoiceMapper())->mapToInvoice($invoiceData);
+$xml = GeneratorInvoice::invoice($invoice)->getXML();
+```
+
+### Signing
 
 ```php
 use Saleh7\Zatca\Helpers\Certificate;
 use Saleh7\Zatca\InvoiceSigner;
-use Saleh7\Zatca\Storage;
 
-// Load the unsigned invoice XML
-$xmlInvoice = (new Storage)->get(__DIR__ . '/output/unsigned_invoice.xml');
+$certificate = new Certificate($certString, $privateKeyString, $secret);
+$signer = InvoiceSigner::signInvoice($xml, $certificate);
 
-// Load the compliance certificate data from the JSON file
-$json_certificate = (new Storage)->get(__DIR__ . '/output/ZATCA_certificate_data.json');
-
-// Decode the JSON data
-$json_data = json_decode($json_certificate, true, 512, JSON_THROW_ON_ERROR);
-
-// Extract certificate details
-$certificate = $json_data['certificate'];
-$secret = $json_data['secret'];
-
-// Load the private key
-$privateKey = (new Storage)->get(__DIR__ . '/output/private.pem');
-$cleanPrivateKey = trim(str_replace(["-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----"], "", $privateKey));
-
-// Create a Certificate instance
-$certificate = new Certificate(
-    $certificate,
-    $cleanPrivateKey,
-    $secret
-);
-
-// Sign the invoice
-$signedInvoice = InvoiceSigner::signInvoice($xmlInvoice, $certificate)->getXML();
-// Save the signed invoice
-(new Storage)->put(__DIR__.'/output/signed_invoice.xml', $signedInvoice);
+$signedXml   = $signer->getInvoice();
+$invoiceHash = $signer->getHash();
 ```
 
-### 📤 **5. Submitting the Signed Invoice to ZATCA**  
+## API Reference
 
-Once the invoice is **digitally signed**, it can be submitted to **ZATCA’s API** for compliance validation and clearance.  
+| Method | Endpoint | Returns |
+|--------|----------|---------|
+| `requestComplianceCertificate($csr, $otp)` | POST /compliance | `ComplianceCertificateResult` |
+| `validateInvoiceCompliance(...)` | POST /compliance/invoices | `ComplianceInvoiceResponse` |
+| `requestProductionCertificate(...)` | POST /production/csids | `ProductionCertificateResult` |
+| `renewProductionCertificate(...)` | PATCH /production/csids | `ProductionCertificateResult` |
+| `submitReportingInvoice(...)` | POST /invoices/reporting/single | `ReportingResponse` |
+| `submitClearanceInvoice(...)` | POST /invoices/clearance/single | `ClearanceResponse` |
 
+All response objects extend `ApiResponse` with: `isSuccess()`, `hasWarnings()`, `hasErrors()`, `getValidationStatus()`, `getWarningMessages()`, `getErrorMessages()`, `toArray()`.
+
+## Examples
+
+| File | Description |
+|------|-------------|
+| [`Certificates/GeneratorCertificate.php`](examples/Certificates/GeneratorCertificate.php) | Generate CSR + private key |
+| [`Certificates/RequestComplianceCertificate.php`](examples/Certificates/RequestComplianceCertificate.php) | Request compliance certificate |
+| [`Certificates/ComplianceCheck.php`](examples/Certificates/ComplianceCheck.php) | Automated 6-invoice compliance + production cert |
+| [`InvoiceSimplified/simplified_invoice.php`](examples/InvoiceSimplified/simplified_invoice.php) | Simplified invoice generation + signing |
+| [`InvoiceStandard/standard_invoice.php`](examples/InvoiceStandard/standard_invoice.php) | Standard invoice generation + signing |
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change. Please make sure to update tests as appropriate.
 
-Please make sure to update tests as appropriate.
-
-## 👨‍💻 Contributors
+## Contributors
 
 <img src="https://github.com/sevaske.png" width="60px;"/><br /><sub><a href="https://github.com/sevaske">sevaske</a></sub>
 
-Thank you all for your continuous support and contributions!
-
-### Special Credits
-
-This project has also benefited from some code snippets and ideas from the [SallaApp/ZATCA](https://github.com/SallaApp/ZATCA) repository. We appreciate their contribution to the community.
-
 ## License
 
-This project is licensed under the [MIT License](https://github.com/Saleh7/php-zatca-xml/blob/main/LICENSE).
+[MIT License](https://github.com/Saleh7/php-zatca-xml/blob/main/LICENSE)

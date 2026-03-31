@@ -4,10 +4,12 @@ require __DIR__ . '/../../vendor/autoload.php';
 use Saleh7\Zatca\ZatcaAPI;
 use Saleh7\Zatca\Exceptions\ZatcaApiException;
 
+// Environment: 'sandbox', 'simulation', or 'production'
 $zatcaClient = new ZatcaAPI('sandbox');
 
 try {
-    $otp = "123123";
+    // Sandbox OTP: 123345 | Production: get from fatoora.zatca.gov.sa
+    $otp = "123345";
     $certificatePath = __DIR__ . '/output/certificate.csr';
     $csr = $zatcaClient->loadCSRFromFile($certificatePath);
     
@@ -17,7 +19,6 @@ try {
     echo "API Secret: " . $complianceResult->getSecret() . "\n";
     echo "Request ID: " . $complianceResult->getRequestId() . "\n";
 
-    // sava file output/ZATCA_certificate_data.json
     $outputFile = __DIR__ . '/output/ZATCA_certificate_data.json';
     $zatcaClient->saveToJson(
         $complianceResult->getCertificate(),

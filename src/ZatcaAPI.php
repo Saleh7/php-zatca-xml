@@ -6,17 +6,39 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Message\ResponseInterface;
+use Saleh7\Zatca\Api\ApiResponse;
+use Saleh7\Zatca\Api\ClearanceResponse;
 use Saleh7\Zatca\Api\ComplianceCertificateResult;
+use Saleh7\Zatca\Api\ComplianceInvoiceResponse;
 use Saleh7\Zatca\Api\ProductionCertificateResult;
+use Saleh7\Zatca\Api\ReportingResponse;
 use Saleh7\Zatca\Exceptions\ZatcaApiException;
-use InvalidArgumentException;
 use Saleh7\Zatca\Exceptions\ZatcaStorageException;
+use InvalidArgumentException;
 
 /**
- * ZATCA E-Invoicing API Client for compliance and reporting operations.
+ * ZATCA E-Invoicing API Client.
+ *
+ * Covers the full ZATCA e-invoicing API lifecycle:
+ *
+ * 1. Compliance Certificate   → POST /compliance
+ * 2. Compliance Invoice Check → POST /compliance/invoices
+ * 3. Production Certificate   → POST /production/csids
+ * 4. Production CSID Renewal  → PATCH /production/csids
+ * 5. Reporting Invoice (B2C)  → POST /invoices/reporting/single
+ * 6. Clearance Invoice (B2B)  → POST /invoices/clearance/single
+ *
+ * @see https://zatca.gov.sa/en/E-Invoicing/Introduction/Guidelines/Documents/ZATCA_FATOORA_Portal_User_Guide.pdf
  */
 class ZatcaAPI
 {
+    /**
+     * ZATCA API base URLs per environment.
+     *
+     * sandbox    → Developer portal for integration testing
+     * simulation → Pre-production simulation environment
+     * production → Live production environment
+     */
     private const ENVIRONMENTS = [
         'sandbox'    => 'https://gw-fatoora.zatca.gov.sa/e-invoicing/developer-portal',
         'simulation' => 'https://gw-fatoora.zatca.gov.sa/e-invoicing/simulation',
@@ -24,22 +46,20 @@ class ZatcaAPI
     ];
 
     private const API_VERSION = 'V2';
-    private const SUCCESS_STATUS_CODES = [200, 202];
 
     private ClientInterface $httpClient;
-    private bool $allowWarnings = false;
     private string $environment;
 
     /**
-     * @param string $environment API environment (sandbox|simulation|production)
-     * @param ClientInterface|null $client Optional HTTP client to enable dependency injection.
-     * @throws InvalidArgumentException For invalid environment.
+     * @param string               $environment API environment (sandbox|simulation|production)
+     * @param ClientInterface|null $client      Optional HTTP client for dependency injection
+     * @throws InvalidArgumentException For invalid environment
      */
     public function __construct(string $environment = 'sandbox', ?ClientInterface $client = null)
     {
         if (!isset(self::ENVIRONMENTS[$environment])) {
             $validEnvs = implode(', ', array_keys(self::ENVIRONMENTS));
-            throw new InvalidArgumentException("Invalid environment. Valid options: $validEnvs");
+            throw new InvalidArgumentException("Invalid environment '$environment'. Valid options: $validEnvs");
         }
         $this->environment = $environment;
         $this->httpClient  = $client ?? new Client([
@@ -50,21 +70,238 @@ class ZatcaAPI
     }
 
     /**
-     * Returns the base URI for the current environment.
-     *
-     * @return string
+     * Get the base URI for the current environment.
      */
     public function getBaseUri(): string
     {
         return self::ENVIRONMENTS[$this->environment];
     }
 
+    // ─── Certificate Lifecycle ─────────────────────────────────────────
+
     /**
-     * Load CSR file content.
+     * Step 1: Request a Compliance Certificate (CCSID).
      *
-     * @param string $path File path of the CSR.
-     * @return string CSR content.
-     * @throws \Exception If file is not found or unreadable.
+     * Submits a CSR with an OTP to obtain a compliance certificate and secret
+     * for use during the compliance check phase.
+     *
+     * Endpoint: POST /compliance
+     *
+     * @param string $csr CSR content (PEM format, will be base64-encoded)
+     * @param string $otp One-Time Password from ZATCA portal
+     * @return ComplianceCertificateResult Certificate, secret, and request ID
+     * @throws ZatcaApiException
+     */
+    public function requestComplianceCertificate(string $csr, string $otp): ComplianceCertificateResult
+    {
+        $response = $this->sendRequest(
+            'POST',
+            '/compliance',
+            ['OTP' => $otp],
+            ['csr' => base64_encode($csr)]
+        );
+
+        return new ComplianceCertificateResult(
+            $this->decodeCertificate($response['binarySecurityToken'] ?? ''),
+            $response['secret'] ?? '',
+            $response['requestID'] ?? ''
+        );
+    }
+
+    /**
+     * Step 2: Request a Production Certificate (PCSID).
+     *
+     * After passing compliance checks, exchange the compliance certificate
+     * for a production certificate.
+     *
+     * Endpoint: POST /production/csids
+     *
+     * @param string $certificate Compliance certificate for authentication
+     * @param string $secret      Compliance secret for authentication
+     * @param string $complianceRequestId Request ID from compliance certificate response
+     * @return ProductionCertificateResult Production certificate, secret, and request ID
+     * @throws ZatcaApiException
+     */
+    public function requestProductionCertificate(
+        string $certificate,
+        string $secret,
+        string $complianceRequestId
+    ): ProductionCertificateResult {
+        $response = $this->sendRequest(
+            'POST',
+            '/production/csids',
+            [],
+            ['compliance_request_id' => $complianceRequestId],
+            $this->buildAuthHeader($certificate, $secret)
+        );
+
+        return new ProductionCertificateResult(
+            $this->decodeCertificate($response['binarySecurityToken'] ?? ''),
+            $response['secret'] ?? '',
+            $response['requestID'] ?? ''
+        );
+    }
+
+    /**
+     * Renew a Production Certificate (PCSID).
+     *
+     * Used to renew an expiring production certificate by submitting a new CSR
+     * with an OTP, authenticated with the current production credentials.
+     *
+     * Endpoint: PATCH /production/csids
+     *
+     * @param string $certificate Current production certificate for authentication
+     * @param string $secret      Current production secret for authentication
+     * @param string $csr         New CSR content (PEM format, will be base64-encoded)
+     * @param string $otp         One-Time Password from ZATCA portal
+     * @return ProductionCertificateResult New production certificate, secret, and request ID
+     * @throws ZatcaApiException
+     */
+    public function renewProductionCertificate(
+        string $certificate,
+        string $secret,
+        string $csr,
+        string $otp
+    ): ProductionCertificateResult {
+        $response = $this->sendRequest(
+            'PATCH',
+            '/production/csids',
+            ['OTP' => $otp],
+            ['csr' => base64_encode($csr)],
+            $this->buildAuthHeader($certificate, $secret)
+        );
+
+        return new ProductionCertificateResult(
+            $this->decodeCertificate($response['binarySecurityToken'] ?? ''),
+            $response['secret'] ?? '',
+            $response['requestID'] ?? ''
+        );
+    }
+
+    // ─── Invoice Operations ────────────────────────────────────────────
+
+    /**
+     * Submit a Reporting Invoice (B2C / Simplified).
+     *
+     * Simplified (B2C) invoices are reported to ZATCA asynchronously.
+     * They do not require clearance but must still be reported.
+     *
+     * Endpoint: POST /invoices/reporting/single
+     *
+     * @param string $certificate    Production certificate for authentication
+     * @param string $secret         Production secret for authentication
+     * @param string $signedInvoice  Signed invoice XML content
+     * @param string $invoiceHash    Invoice hash (SHA-256, base64-encoded)
+     * @param string $uuid           Unique invoice identifier (UUID v4)
+     * @return ReportingResponse
+     * @throws ZatcaApiException
+     */
+    public function submitReportingInvoice(
+        string $certificate,
+        string $secret,
+        string $signedInvoice,
+        string $invoiceHash,
+        string $uuid
+    ): ReportingResponse {
+        $data = $this->sendRequest(
+            'POST',
+            '/invoices/reporting/single',
+            ['Clearance-Status' => '0'],
+            [
+                'invoiceHash' => $invoiceHash,
+                'uuid'        => $uuid,
+                'invoice'     => base64_encode($signedInvoice),
+            ],
+            $this->buildAuthHeader($certificate, $secret)
+        );
+
+        return new ReportingResponse($data, $this->lastStatusCode);
+    }
+
+    /**
+     * Submit a Clearance Invoice (B2B / Standard).
+     *
+     * Standard (B2B) invoices require real-time clearance from ZATCA.
+     * The response includes the cleared (stamped) invoice XML.
+     *
+     * Endpoint: POST /invoices/clearance/single
+     *
+     * @param string $certificate    Production certificate for authentication
+     * @param string $secret         Production secret for authentication
+     * @param string $signedInvoice  Signed invoice XML content
+     * @param string $invoiceHash    Invoice hash (SHA-256, base64-encoded)
+     * @param string $uuid           Unique invoice identifier (UUID v4)
+     * @return ClearanceResponse
+     * @throws ZatcaApiException
+     */
+    public function submitClearanceInvoice(
+        string $certificate,
+        string $secret,
+        string $signedInvoice,
+        string $invoiceHash,
+        string $uuid
+    ): ClearanceResponse {
+        $data = $this->sendRequest(
+            'POST',
+            '/invoices/clearance/single',
+            ['Clearance-Status' => '1'],
+            [
+                'invoiceHash' => $invoiceHash,
+                'uuid'        => $uuid,
+                'invoice'     => base64_encode($signedInvoice),
+            ],
+            $this->buildAuthHeader($certificate, $secret)
+        );
+
+        return new ClearanceResponse($data, $this->lastStatusCode);
+    }
+
+    /**
+     * Validate invoice compliance.
+     *
+     * Used during the compliance check phase (before requesting production certificate)
+     * to verify that invoices meet ZATCA requirements.
+     *
+     * Endpoint: POST /compliance/invoices
+     *
+     * @param string $certificate    Compliance certificate for authentication
+     * @param string $secret         Compliance secret for authentication
+     * @param string $signedInvoice  Signed invoice XML content
+     * @param string $invoiceHash    Invoice hash (SHA-256, base64-encoded)
+     * @param string $uuid           Unique invoice identifier (UUID v4)
+     * @return ComplianceInvoiceResponse
+     * @throws ZatcaApiException
+     */
+    public function validateInvoiceCompliance(
+        string $certificate,
+        string $secret,
+        string $signedInvoice,
+        string $invoiceHash,
+        string $uuid
+    ): ComplianceInvoiceResponse {
+        $data = $this->sendRequest(
+            'POST',
+            '/compliance/invoices',
+            [],
+            [
+                'invoiceHash' => $invoiceHash,
+                'uuid'        => $uuid,
+                'invoice'     => base64_encode($signedInvoice),
+            ],
+            $this->buildAuthHeader($certificate, $secret)
+        );
+
+        return new ComplianceInvoiceResponse($data, $this->lastStatusCode);
+    }
+
+    // ─── Utilities ─────────────────────────────────────────────────────
+
+    /**
+     * Load CSR content from a file.
+     *
+     * @param string $path File path to the CSR
+     * @return string CSR content
+     * @throws \Exception If file is not found or unreadable
      */
     public function loadCSRFromFile(string $path): string
     {
@@ -79,252 +316,14 @@ class ZatcaAPI
     }
 
     /**
-     * Enable/disable acceptance of warning responses.
-     */
-    public function setWarningHandling(bool $allow): void
-    {
-        $this->allowWarnings = $allow;
-    }
-
-    /**
-     * Request compliance certificate using CSR and OTP.
+     * Save certificate data to a JSON file for later use.
      *
-     * @param string $csr CSR content.
-     * @param string $otp One-Time Password.
-     * @return ComplianceCertificateResult
-     * @throws ZatcaApiException For API communication errors.
-     */
-    public function requestComplianceCertificate(string $csr, string $otp): ComplianceCertificateResult
-    {
-        $response = $this->sendRequest(
-            'POST',
-            '/compliance',
-            ['OTP' => $otp],
-            ['csr' => base64_encode($csr)]
-        );
-
-        return new ComplianceCertificateResult(
-            $this->formatCertificate($response['binarySecurityToken'] ?? ''),
-            $response['secret'] ?? '',
-            $response['requestID'] ?? ''
-        );
-    }
-
-    /**
-     * Validate invoice compliance with ZATCA regulations.
-     *
-     * @param string $certificate The certificate for authentication.
-     * @param string $secret      API secret.
-     * @param string $signedInvoice Signed invoice content.
-     * @param string $invoiceHash Invoice hash.
-     * @param string $uuid      Unique invoice identifier.
-     * @return array API response data.
-     * @throws ZatcaApiException For API communication errors.
-     */
-    public function validateInvoiceCompliance(
-        string $certificate,
-        string $secret,
-        string $signedInvoice,
-        string $invoiceHash,
-        string $uuid
-    ): array {
-        try {
-            return $this->sendRequest(
-                'POST',
-                '/compliance/invoices',
-                ['Accept-Language' => 'en', 'Content-Type' => 'application/json'],
-                [
-                    'invoiceHash' => $invoiceHash,
-                    'uuid'        => $uuid,
-                    'invoice'     => base64_encode($signedInvoice),
-                ],
-                $this->createAuthHeaders($certificate, $secret)
-            );
-        } catch (ZatcaApiException $e) {
-            // يمكن إضافة منطق لمعالجة التحذيرات هنا إذا لزم الأمر.
-            throw $e;
-        }
-    }
-
-    /**
-     * Request production certificate using compliance credentials.
-     *
-     * @param string $certificate         The certificate for authentication.
-     * @param string $secret              API secret.
-     * @param string $complianceRequestId Compliance request ID.
-     * @return ProductionCertificateResult
-     * @throws ZatcaApiException For API communication errors.
-     */
-    public function requestProductionCertificate(
-        string $certificate,
-        string $secret,
-        string $complianceRequestId
-    ): ProductionCertificateResult {
-        $response = $this->sendRequest(
-            'POST',
-            '/production/csids',
-            ['Content-Type' => 'application/json'],
-            ['compliance_request_id' => $complianceRequestId],
-            $this->createAuthHeaders($certificate, $secret)
-        );
-
-        return new ProductionCertificateResult(
-            $this->formatCertificate($response['binarySecurityToken'] ?? ''),
-            $response['secret'] ?? '',
-            $response['requestID'] ?? ''
-        );
-    }
-
-    /**
-     * Submit invoice for clearance reporting.
-     *
-     * @param string $certificate  The certificate for authentication.
-     * @param string $secret       API secret.
-     * @param string $signedInvoice Signed invoice content.
-     * @param string $invoiceHash  Invoice hash.
-     * @param string $egsUuid      Unique invoice identifier.
-     * @return array API response data.
-     * @throws ZatcaApiException For API communication errors.
-     */
-    public function submitClearanceInvoice(
-        string $certificate,
-        string $secret,
-        string $signedInvoice,
-        string $invoiceHash,
-        string $egsUuid
-    ): array {
-        return $this->sendRequest(
-            'POST',
-            '/invoices/clearance/single',
-            ['Clearance-Status' => '1', 'Accept-Language' => 'en'],
-            [
-                'invoiceHash' => $invoiceHash,
-                'uuid'        => $egsUuid,
-                'invoice'     => base64_encode($signedInvoice),
-            ],
-            $this->createAuthHeaders($certificate, $secret)
-        );
-    }
-
-    /**
-     * Generate authentication headers for secured endpoints.
-     *
-     * @param string $certificate
-     * @param string $secret
-     * @return array
-     */
-    private function createAuthHeaders(string $certificate, string $secret): array
-    {
-        $cleanCert   = trim($certificate);
-        $credentials = base64_encode($cleanCert . ':' . $secret);
-        return ['Authorization' => 'Basic ' . $credentials];
-    }
-
-    /**
-     * Core request handling with Guzzle.
-     *
-     * @param string $method HTTP method.
-     * @param string $endpoint API endpoint.
-     * @param array $headers Additional headers.
-     * @param array $payload Request payload.
-     * @param array $authHeaders Optional auth headers.
-     * @return array Decoded response data.
-     * @throws ZatcaApiException On HTTP or API errors.
-     */
-    private function sendRequest(
-        string $method,
-        string $endpoint,
-        array $headers = [],
-        array $payload = [],
-        array $authHeaders = []
-    ): array {
-        try {
-            $mergedHeaders = array_merge(
-                [
-                    'Accept-Version' => self::API_VERSION,
-                    'Accept'         => 'application/json',
-                ],
-                $headers,
-                $authHeaders
-            );
-
-            $options = [
-                'headers' => $mergedHeaders,
-                'json'    => $payload,
-            ];
-
-            // استخدام عنوان URL المبني على البيئة الحالية
-            $url = $this->getBaseUri() . $endpoint;
-
-            $response = $this->httpClient->request($method, $url, $options);
-            $statusCode = $response->getStatusCode();
-
-            if (!$this->isSuccessfulResponse($statusCode)) {
-                throw new ZatcaApiException(null, [
-                    'endpoint' => $endpoint,
-                    'options'  => $options,
-                    'response' => $this->parseResponse($response),
-                ]);
-            }
-
-            return $this->parseResponse($response);
-        } catch (GuzzleException $e) {
-            throw new ZatcaApiException('HTTP request failed', [
-                'message'  => $e->getMessage(),
-                'endpoint' => $endpoint,
-            ], $e->getCode(), $e);
-        }
-    }
-
-    /**
-     * Validate HTTP status code against success criteria.
-     */
-    private function isSuccessfulResponse(int $statusCode): bool
-    {
-        return in_array($statusCode, self::SUCCESS_STATUS_CODES, true) &&
-               ($this->allowWarnings || $statusCode === 200);
-    }
-
-    /**
-     * Parse API response.
-     *
-     * @param ResponseInterface $response
-     * @return array
-     * @throws ZatcaApiException If response JSON is invalid.
-     */
-    private function parseResponse(ResponseInterface $response): array
-    {
-        $content = $response->getBody()->getContents();
-        $data    = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new ZatcaApiException('Failed to parse API response: ' . json_last_error_msg());
-        }
-
-        return $data;
-    }
-
-    /**
-     * Format certificate string with PEM boundaries.
-     *
-     * @param string $base64Certificate
-     * @return string
-     */
-    private function formatCertificate(string $base64Certificate): string
-    {
-        return base64_decode($base64Certificate);
-    }
-
-    /**
-     * Save certificate data to a JSON file.
-     *
-     * @param string $certificate The certificate string.
-     * @param string $secret      The API secret.
-     * @param string $requestId   The request ID.
-     * @param string $filePath    Path to save the JSON file.
-     * @return void
-     * @throws \Exception If failed to encode data to JSON
-     * @throws ZatcaStorageException If file cannot be written.
+     * @param string $certificate The certificate string
+     * @param string $secret      The API secret
+     * @param string $requestId   The request ID
+     * @param string $filePath    Path to save the JSON file
+     * @throws \Exception If JSON encoding fails
+     * @throws ZatcaStorageException If file cannot be written
      */
     public function saveToJson(string $certificate, string $secret, string $requestId, string $filePath): void
     {
@@ -341,5 +340,122 @@ class ZatcaAPI
 
         (new Storage)->put($filePath, $json);
     }
-    
+
+    // ─── Internal ──────────────────────────────────────────────────────
+
+    /** @var int Last HTTP status code from sendRequest */
+    private int $lastStatusCode = 0;
+
+    /**
+     * Build Basic auth header from certificate and secret.
+     *
+     * ZATCA auth format: Basic base64( base64(certificate) : secret )
+     *
+     * The certificate is stored as base64_decode(binarySecurityToken).
+     * Re-encoding it with base64 reconstructs the original token for auth.
+     */
+    private function buildAuthHeader(string $certificate, string $secret): array
+    {
+        $credentials = base64_encode(base64_encode(trim($certificate)) . ':' . trim($secret));
+        return ['Authorization' => 'Basic ' . $credentials];
+    }
+
+    /**
+     * Decode a binarySecurityToken from ZATCA's response.
+     *
+     * ZATCA returns certificates as base64-encoded strings in the binarySecurityToken field.
+     */
+    private function decodeCertificate(string $base64Token): string
+    {
+        return base64_decode($base64Token);
+    }
+
+    /**
+     * Send an HTTP request to the ZATCA API.
+     *
+     * @param string $method      HTTP method (POST, PATCH)
+     * @param string $endpoint    API endpoint path
+     * @param array  $headers     Additional request headers
+     * @param array  $payload     Request body (JSON-encoded)
+     * @param array  $authHeaders Authentication headers
+     * @return array Decoded response data
+     * @throws ZatcaApiException On HTTP or API errors
+     */
+    private function sendRequest(
+        string $method,
+        string $endpoint,
+        array $headers = [],
+        array $payload = [],
+        array $authHeaders = []
+    ): array {
+        try {
+            $mergedHeaders = array_merge(
+                [
+                    'Accept-Version' => self::API_VERSION,
+                    'Accept'         => 'application/json',
+                    'Content-Type'   => 'application/json',
+                    'Accept-Language' => 'en',
+                ],
+                $headers,
+                $authHeaders
+            );
+
+            $options = [
+                'headers'     => $mergedHeaders,
+                'json'        => $payload,
+                'http_errors' => false, // Don't throw on 4xx/5xx, we handle it
+            ];
+
+            $url = $this->getBaseUri() . $endpoint;
+
+            $response = $this->httpClient->request($method, $url, $options);
+            $this->lastStatusCode = $response->getStatusCode();
+
+            $data = $this->parseResponse($response);
+
+            // 200 = success, 202 = accepted with warnings
+            if ($this->lastStatusCode >= 300) {
+                throw new ZatcaApiException(
+                    sprintf('ZATCA API error (HTTP %d) on %s %s', $this->lastStatusCode, $method, $endpoint),
+                    [
+                        'endpoint'   => $endpoint,
+                        'statusCode' => $this->lastStatusCode,
+                        'response'   => $data,
+                    ]
+                );
+            }
+
+            return $data;
+        } catch (GuzzleException $e) {
+            throw new ZatcaApiException('HTTP request failed', [
+                'message'  => $e->getMessage(),
+                'endpoint' => $endpoint,
+            ], $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Parse the JSON response body.
+     *
+     * @throws ZatcaApiException If JSON is invalid
+     */
+    private function parseResponse(ResponseInterface $response): array
+    {
+        $content = $response->getBody()->getContents();
+
+        if (trim($content) === '') {
+            return [];
+        }
+
+        $data = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new ZatcaApiException('Failed to parse API response: ' . json_last_error_msg(), [
+                'content'    => substr($content, 0, 1024),
+                'statusCode' => $response->getStatusCode(),
+            ]);
+        }
+
+        return $data;
+    }
 }

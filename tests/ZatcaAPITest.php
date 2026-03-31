@@ -12,14 +12,14 @@ use Saleh7\Zatca\ZatcaAPI;
 use Saleh7\Zatca\Exceptions\ZatcaApiException;
 use Saleh7\Zatca\Api\ComplianceCertificateResult;
 use Saleh7\Zatca\Api\ProductionCertificateResult;
+use Saleh7\Zatca\Api\ReportingResponse;
+use Saleh7\Zatca\Api\ClearanceResponse;
+use Saleh7\Zatca\Api\ComplianceInvoiceResponse;
 
 final class ZatcaAPITest extends TestCase
 {
     /**
-     * Helper method to create a Guzzle client with a mock handler.
-     *
-     * @param array $responses Array of responses for the mock handler.
-     * @return ClientInterface
+     * Helper: create a Guzzle client with a mock handler.
      */
     private function createMockHttpClient(array $responses): ClientInterface
     {
@@ -28,170 +28,328 @@ final class ZatcaAPITest extends TestCase
         return new Client(['handler' => $handlerStack]);
     }
 
-    /**
-     * Test that an invalid environment throws an exception.
-     */
-    public function testInvalidEnvironment(): void
+    // ─── Environment ───────────────────────────────────────────────────
+
+    public function testInvalidEnvironmentThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid environment 'invalid_env'");
         new ZatcaAPI('invalid_env');
     }
 
-    /**
-     * Test loadCSRFromFile returns file content on success.
-     */
+    public function testValidEnvironments(): void
+    {
+        $this->assertStringContainsString('developer-portal', (new ZatcaAPI('sandbox'))->getBaseUri());
+        $this->assertStringContainsString('simulation', (new ZatcaAPI('simulation'))->getBaseUri());
+        $this->assertStringContainsString('core', (new ZatcaAPI('production'))->getBaseUri());
+    }
+
+    // ─── File Loading ──────────────────────────────────────────────────
+
     public function testLoadCSRFromFileSuccess(): void
     {
-        $content = "MIIB3DCCAYMCAQAwVDEYMBYGA1UEAwwPTXkgT3JnYW5pemF0aW9uMRMwEQYDVQQKDApNeSBDb21wYW55MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MQswCQYDVQQGEwJTQTBWMBAGByqGSM49AgEGBSuBBAAKA0IABHYPn3tSuNqgjJR/DEJsYtNkcylN0nzRwOUFE4fbm+r6ok72OTjdENwowSdqs6wngYLoo8kEAhQEQ7paSmlgGluggc8wgcwGCSqGSIb3DQEJDjGBvjCBuzAhBgkrBgEEAYI3FAIEFAwSWkFUQ0EtQ29kZS1TaWduaW5nMIGVBgNVHREEgY0wgYqkgYcwgYQxIDAeBgNVBAQMFzEtU2FsZWh8Mi0xbnwzLVNNRTAwMDIzMR8wHQYKCZImiZPyLGQBAQwPMzEyMzQ1Njc4OTAxMjMzMQ0wCwYDVQQMDAQxMTAwMRswGQYDVQQaDBJSaXlhZGggMTIzNCBTdHJlZXQxEzARBgNVBA8MClRlY2hub2xvZ3kwCgYIKoZIzj0EAwIDRwAwRAIgJMOBzaCGqhov7dKF/Ftb1smpMQvLURr8+xbbTaMWJtoCIA3Jz79S0UsaSob3n6zNZnm56aDCQ+20V6fbxKBz40dl";
+        $content = "test-csr-content";
         $tempFile = tempnam(sys_get_temp_dir(), 'csr_');
         file_put_contents($tempFile, $content);
 
         $api = new ZatcaAPI('sandbox');
-        $result = $api->loadCSRFromFile($tempFile);
-        $this->assertEquals($content, $result, 'CSR file content should match expected content.');
+        $this->assertEquals($content, $api->loadCSRFromFile($tempFile));
 
         unlink($tempFile);
     }
 
-    /**
-     * Test loadCSRFromFile throws an exception if the file does not exist.
-     */
     public function testLoadCSRFromFileNotFound(): void
     {
-        $api = new ZatcaAPI('sandbox');
         $this->expectException(Exception::class);
-        $api->loadCSRFromFile('nonexistent_file.csr');
+        $this->expectExceptionMessage('File not found');
+        (new ZatcaAPI('sandbox'))->loadCSRFromFile('nonexistent_file.csr');
     }
 
-    /**
-     * Test that requestComplianceCertificate returns a valid result.
-     */
+    // ─── Compliance Certificate ────────────────────────────────────────
+
     public function testRequestComplianceCertificateSuccess(): void
     {
+        $certContent = "MIICBDCCAaqgAwIBAgIGAZT...mock-cert-data";
         $responseData = [
-            'binarySecurityToken' => base64_encode("MIICBDCCAaqgAwIBAgIGAZT/XebzMAoGCCqGSM49BAMCMBUxEzARBgNVBAMMCmVJbnZvaWNpbmcwHhcNMjUwMjEzMTI1MjA2WhcNMzAwMjEyMjEwMDAwWjBUMRgwFgYDVQQDDA9NeSBPcmdhbml6YXRpb24xEzARBgNVBAoMCk15IENvbXBhbnkxFjAUBgNVBAsMDUlUIERlcGFydG1lbnQxCzAJBgNVBAYTAlNBMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEdg+fe1K42qCMlH8MQmxi02RzKU3SfNHA5QUTh9ub6vqiTvY5ON0Q3CjBJ2qzrCeBguijyQQCFARDulpKaWAaW6OBqTCBpjAMBgNVHRMBAf8EAjAAMIGVBgNVHREEgY0wgYqkgYcwgYQxIDAeBgNVBAQMFzEtU2FsZWh8Mi0xbnwzLVNNRTAwMDIzMR8wHQYKCZImiZPyLGQBAQwPMzEyMzQ1Njc4OTAxMjMzMQ0wCwYDVQQMDAQxMTAwMRswGQYDVQQaDBJSaXlhZGggMTIzNCBTdHJlZXQxEzARBgNVBA8MClRlY2hub2xvZ3kwCgYIKoZIzj0EAwIDRwAwRAIgJMOBzaCGqhov7dKF/Ftb1smpMQvLURr8+xbbTaMWJtoCIA3Jz79S0UsaSob3n6zNZnm56aDCQ+20V6fbxKBz40dl"),
-            'secret'              => "Dehvg1fc8GF6Jwt5bOxXwC6enR93VxeNEo2mlUatfgw=",
-            'requestID'           => "1234567890123"
+            'binarySecurityToken' => base64_encode($certContent),
+            'secret'              => 'Dehvg1fc8GF6Jwt5bOxXwC6enR93VxeNEo2mlUatfgw=',
+            'requestID'           => '1234567890123',
         ];
         $client = $this->createMockHttpClient([
             new Response(200, [], json_encode($responseData))
         ]);
 
-        $api = new ZatcaAPI('sandbox', $client);
-
-        $csr = "MIIB3DCCAYMCAQAwVDEYMBYGA1UEAwwPTXkgT3JnYW5pemF0aW9uMRMwEQYDVQQKDApNeSBDb21wYW55MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MQswCQYDVQQGEwJTQTBWMBAGByqGSM49AgEGBSuBBAAKA0IABHYPn3tSuNqgjJR/DEJsYtNkcylN0nzRwOUFE4fbm+r6ok72OTjdENwowSdqs6wngYLoo8kEAhQEQ7paSmlgGluggc8wgcwGCSqGSIb3DQEJDjGBvjCBuzAhBgkrBgEEAYI3FAIEFAwSWkFUQ0EtQ29kZS1TaWduaW5nMIGVBgNVHREEgY0wgYqkgYcwgYQxIDAeBgNVBAQMFzEtU2FsZWh8Mi0xbnwzLVNNRTAwMDIzMR8wHQYKCZImiZPyLGQBAQwPMzEyMzQ1Njc4OTAxMjMzMQ0wCwYDVQQMDAQxMTAwMRswGQYDVQQaDBJSaXlhZGggMTIzNCBTdHJlZXQxEzARBgNVBA8MClRlY2hub2xvZ3kwCgYIKoZIzj0EAwIDRwAwRAIgJMOBzaCGqhov7dKF/Ftb1smpMQvLURr8+xbbTaMWJtoCIA3Jz79S0UsaSob3n6zNZnm56aDCQ+20V6fbxKBz40dl";
-        $result = $api->requestComplianceCertificate($csr, "123123");
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->requestComplianceCertificate('dummy-csr', '123123');
 
         $this->assertInstanceOf(ComplianceCertificateResult::class, $result);
-        $formattedCertificate = $result->getCertificate();
-        $this->assertNotFalse(base64_decode($formattedCertificate, true), 'Certificate should be a valid Base64 string.');
-
-        $decodedCertificate = base64_decode($formattedCertificate, true);
-        $this->assertTrue(ctype_print($decodedCertificate) === false, 'Certificate should contain binary data.');
-        
-        $this->assertEquals("Dehvg1fc8GF6Jwt5bOxXwC6enR93VxeNEo2mlUatfgw=", $result->getSecret());
-        $this->assertEquals("1234567890123", $result->getRequestId());
+        $this->assertEquals($certContent, $result->getCertificate());
+        $this->assertEquals('Dehvg1fc8GF6Jwt5bOxXwC6enR93VxeNEo2mlUatfgw=', $result->getSecret());
+        $this->assertEquals('1234567890123', $result->getRequestId());
     }
 
-    /**
-     * Test that validateInvoiceCompliance returns the expected data.
-     */
+    public function testRequestComplianceCertificateToArray(): void
+    {
+        $responseData = [
+            'binarySecurityToken' => base64_encode('cert'),
+            'secret'              => 'secret123',
+            'requestID'           => 'req123',
+        ];
+        $client = $this->createMockHttpClient([
+            new Response(200, [], json_encode($responseData))
+        ]);
+
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->requestComplianceCertificate('csr', '000000');
+
+        $arr = $result->toArray();
+        $this->assertArrayHasKey('certificate', $arr);
+        $this->assertArrayHasKey('secret', $arr);
+        $this->assertArrayHasKey('requestId', $arr);
+    }
+
+    // ─── Production Certificate ────────────────────────────────────────
+
+    public function testRequestProductionCertificateSuccess(): void
+    {
+        $certContent = "production-cert-data";
+        $responseData = [
+            'binarySecurityToken' => base64_encode($certContent),
+            'secret'              => 'prodSecret',
+            'requestID'           => 'prodReqID',
+        ];
+        $client = $this->createMockHttpClient([
+            new Response(200, [], json_encode($responseData))
+        ]);
+
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->requestProductionCertificate('cert', 'secret', 'complianceReqId');
+
+        $this->assertInstanceOf(ProductionCertificateResult::class, $result);
+        $this->assertEquals($certContent, $result->getCertificate());
+        $this->assertEquals('prodSecret', $result->getSecret());
+        $this->assertEquals('prodReqID', $result->getRequestId());
+    }
+
+    // ─── Renew Production Certificate ──────────────────────────────────
+
+    public function testRenewProductionCertificateSuccess(): void
+    {
+        $certContent = "renewed-cert-data";
+        $responseData = [
+            'binarySecurityToken' => base64_encode($certContent),
+            'secret'              => 'newSecret',
+            'requestID'           => 'renewReqID',
+        ];
+        $client = $this->createMockHttpClient([
+            new Response(200, [], json_encode($responseData))
+        ]);
+
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->renewProductionCertificate('cert', 'secret', 'new-csr', '654321');
+
+        $this->assertInstanceOf(ProductionCertificateResult::class, $result);
+        $this->assertEquals($certContent, $result->getCertificate());
+        $this->assertEquals('newSecret', $result->getSecret());
+        $this->assertEquals('renewReqID', $result->getRequestId());
+    }
+
+    // ─── Reporting Invoice (B2C) ───────────────────────────────────────
+
+    public function testSubmitReportingInvoiceSuccess(): void
+    {
+        $responseData = [
+            'reportingStatus'   => 'REPORTED',
+            'validationResults' => [
+                'status'          => 'PASS',
+                'infoMessages'    => [['message' => 'Invoice reported successfully']],
+                'warningMessages' => [],
+                'errorMessages'   => [],
+            ],
+        ];
+        $client = $this->createMockHttpClient([
+            new Response(200, [], json_encode($responseData))
+        ]);
+
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->submitReportingInvoice('cert', 'secret', '<Invoice>...</Invoice>', 'hash123', 'uuid-1');
+
+        $this->assertInstanceOf(ReportingResponse::class, $result);
+        $this->assertTrue($result->isReported());
+        $this->assertEquals('REPORTED', $result->getReportingStatus());
+        $this->assertTrue($result->isSuccess());
+        $this->assertFalse($result->hasErrors());
+        $this->assertEquals('PASS', $result->getValidationStatus());
+        $this->assertNotEmpty($result->getInfoMessages());
+    }
+
+    public function testSubmitReportingInvoiceWithWarnings(): void
+    {
+        $responseData = [
+            'reportingStatus'   => 'REPORTED',
+            'validationResults' => [
+                'status'          => 'WARNING',
+                'infoMessages'    => [],
+                'warningMessages' => [['message' => 'Minor issue found']],
+                'errorMessages'   => [],
+            ],
+        ];
+        $client = $this->createMockHttpClient([
+            new Response(202, [], json_encode($responseData))
+        ]);
+
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->submitReportingInvoice('cert', 'secret', '<Invoice/>', 'hash', 'uuid');
+
+        $this->assertInstanceOf(ReportingResponse::class, $result);
+        $this->assertTrue($result->isReported());
+        $this->assertTrue($result->hasWarnings());
+        $this->assertFalse($result->hasErrors());
+        $this->assertCount(1, $result->getWarningMessages());
+    }
+
+    // ─── Clearance Invoice (B2B) ───────────────────────────────────────
+
+    public function testSubmitClearanceInvoiceSuccess(): void
+    {
+        $clearedXml = '<Invoice>cleared</Invoice>';
+        $responseData = [
+            'clearanceStatus'   => 'CLEARED',
+            'clearedInvoice'    => base64_encode($clearedXml),
+            'validationResults' => [
+                'status'          => 'PASS',
+                'infoMessages'    => [],
+                'warningMessages' => [],
+                'errorMessages'   => [],
+            ],
+        ];
+        $client = $this->createMockHttpClient([
+            new Response(200, [], json_encode($responseData))
+        ]);
+
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->submitClearanceInvoice('cert', 'secret', '<Invoice/>', 'hash', 'uuid');
+
+        $this->assertInstanceOf(ClearanceResponse::class, $result);
+        $this->assertTrue($result->isCleared());
+        $this->assertEquals('CLEARED', $result->getClearanceStatus());
+        $this->assertNotNull($result->getClearedInvoice());
+        $this->assertEquals($clearedXml, $result->getDecodedClearedInvoice());
+        $this->assertFalse($result->hasErrors());
+    }
+
+    // ─── Compliance Invoice ────────────────────────────────────────────
+
     public function testValidateInvoiceComplianceSuccess(): void
     {
         $responseData = [
-            'invoiceHash' => 'lUatfgwehvg1fc8GF6Jwt5bOwCD6enR93VxeNEo2mlUatfgw=',
-            'uuid'        => 'dummyUuid',
-            'invoice'     => base64_encode("signedInvoiceData")
+            'reportingStatus'   => 'REPORTED',
+            'clearanceStatus'   => null,
+            'status'            => 'PASS',
+            'validationResults' => [
+                'status'          => 'PASS',
+                'infoMessages'    => [],
+                'warningMessages' => [],
+                'errorMessages'   => [],
+            ],
         ];
         $client = $this->createMockHttpClient([
             new Response(200, [], json_encode($responseData))
         ]);
 
-        $api = new ZatcaAPI('sandbox', $client);
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->validateInvoiceCompliance('cert', 'secret', '<Invoice/>', 'hash', 'uuid');
 
-        $certificate  = "dummy certificate";
-        $secret       = "dummySecret";
-        $signedInvoice= "signedInvoiceData";
-        $invoiceHash  = "dummyHash";
-        $uuid         = "dummyUuid";
-
-        $result = $api->validateInvoiceCompliance($certificate, $secret, $signedInvoice, $invoiceHash, $uuid);
-        $this->assertIsArray($result);
-        $this->assertEquals($responseData['invoiceHash'], $result['invoiceHash']);
+        $this->assertInstanceOf(ComplianceInvoiceResponse::class, $result);
+        $this->assertTrue($result->isSuccess());
+        $this->assertEquals('REPORTED', $result->getReportingStatus());
+        $this->assertEquals('PASS', $result->getStatus());
     }
 
-    /**
-     * Test that requestProductionCertificate returns a valid production result.
-     */
-    public function testRequestProductionCertificateSuccess()
+    // ─── Error Handling ────────────────────────────────────────────────
+
+    public function testApiErrorThrowsException(): void
     {
-        $responseData = [
-            'binarySecurityToken' => base64_encode("dummyProductionCertificate"),
-            'secret'              => "prodSecret",
-            'requestID'           => "prodRequestID"
-        ];
         $client = $this->createMockHttpClient([
-            new Response(200, [], json_encode($responseData))
+            new Response(400, [], json_encode(['error' => 'Bad Request']))
         ]);
 
-        $api = new ZatcaAPI('sandbox', $client);
-
-        $certificate          = "dummy certificate";
-        $secret               = "dummySecret";
-        $complianceRequestId  = "dummyComplianceRequestID";
-
-        $result = $api->requestProductionCertificate($certificate, $secret, $complianceRequestId);
-  
-        $this->assertInstanceOf(ProductionCertificateResult::class, $result);
-        $formattedCertificate = $result->getCertificate();
-        $this->assertNotFalse(base64_decode($formattedCertificate, true), 'Certificate should be a valid Base64 string.');
-
-        $decodedCertificate = base64_decode($formattedCertificate, true);
-        $this->assertTrue(ctype_print($decodedCertificate) === false, 'Certificate should contain binary data.');
-    
-        $this->assertEquals("prodSecret", $result->getSecret());
-        $this->assertEquals("prodRequestID", $result->getRequestId());
-    }
-
-    /**
-     * Test that submitClearanceInvoice returns expected API data.
-     */
-    public function testSubmitClearanceInvoiceSuccess(): void
-    {
-        $responseData = [
-            'invoiceHash' => 'dummyHash',
-            'uuid'        => 'dummyUuid',
-            'invoice'     => base64_encode("signedInvoiceData")
-        ];
-        $client = $this->createMockHttpClient([
-            new Response(200, [], json_encode($responseData))
-        ]);
-
-        $api = new ZatcaAPI('sandbox', $client);
-
-        $certificate   = "dummy certificate";
-        $secret        = "dummySecret";
-        $signedInvoice = "signedInvoiceData";
-        $invoiceHash   = "dummyHash";
-        $egsUuid       = "dummyUuid";
-
-        $result = $api->submitClearanceInvoice($certificate, $secret, $signedInvoice, $invoiceHash, $egsUuid);
-        $this->assertIsArray($result);
-        $this->assertEquals($responseData['invoiceHash'], $result['invoiceHash']);
-    }
-
-    /**
-     * Test that API error responses throw a ZatcaApiException.
-     */
-    public function testSendRequestFailure(): void
-    {
-        $errorResponseData = ['error' => 'Bad Request'];
-        $client = $this->createMockHttpClient([
-            new Response(400, [], json_encode($errorResponseData))
-        ]);
-
-        $api = new ZatcaAPI('sandbox', $client);
         $this->expectException(ZatcaApiException::class);
-        $api->requestComplianceCertificate("dummy csr", "123123");
+        $this->expectExceptionMessage('ZATCA API error (HTTP 400)');
+
+        (new ZatcaAPI('sandbox', $client))
+            ->requestComplianceCertificate('csr', '000000');
+    }
+
+    public function testApiErrorContextContainsDetails(): void
+    {
+        $client = $this->createMockHttpClient([
+            new Response(401, [], json_encode(['message' => 'Unauthorized']))
+        ]);
+
+        try {
+            (new ZatcaAPI('sandbox', $client))
+                ->requestComplianceCertificate('csr', '000000');
+            $this->fail('Expected ZatcaApiException');
+        } catch (ZatcaApiException $e) {
+            $context = $e->getContext();
+            $this->assertEquals(401, $context['statusCode']);
+            $this->assertEquals('/compliance', $context['endpoint']);
+            $this->assertArrayHasKey('response', $context);
+        }
+    }
+
+    public function testInvalidJsonResponseThrowsException(): void
+    {
+        $client = $this->createMockHttpClient([
+            new Response(200, [], 'not-json{{{')
+        ]);
+
+        $this->expectException(ZatcaApiException::class);
+        $this->expectExceptionMessage('Failed to parse API response');
+
+        (new ZatcaAPI('sandbox', $client))
+            ->requestComplianceCertificate('csr', '000000');
+    }
+
+    // ─── Response Base Class ───────────────────────────────────────────
+
+    public function testApiResponseToArray(): void
+    {
+        $responseData = [
+            'clearanceStatus'   => 'CLEARED',
+            'validationResults' => ['status' => 'PASS'],
+        ];
+        $client = $this->createMockHttpClient([
+            new Response(200, [], json_encode($responseData))
+        ]);
+
+        $result = (new ZatcaAPI('sandbox', $client))
+            ->submitClearanceInvoice('cert', 'secret', '<Invoice/>', 'hash', 'uuid');
+
+        $arr = $result->toArray();
+        $this->assertEquals('CLEARED', $arr['clearanceStatus']);
+        $this->assertEquals('PASS', $arr['validationResults']['status']);
+    }
+
+    // ─── Save to JSON ──────────────────────────────────────────────────
+
+    public function testSaveToJson(): void
+    {
+        // Reset any static base path that may have been set by other tests
+        \Saleh7\Zatca\Storage::setBasePath('');
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'zatca_json_');
+
+        $api = new ZatcaAPI('sandbox');
+        $api->saveToJson('test-cert', 'test-secret', 'test-req-id', $tempFile);
+
+        $this->assertFileExists($tempFile);
+        $data = json_decode(file_get_contents($tempFile), true);
+        $this->assertEquals('test-cert', $data['certificate']);
+        $this->assertEquals('test-secret', $data['secret']);
+        $this->assertEquals('test-req-id', $data['requestId']);
+
+        unlink($tempFile);
     }
 }
