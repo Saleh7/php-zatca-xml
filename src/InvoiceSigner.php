@@ -90,7 +90,9 @@ class InvoiceSigner
      */
     public function saveXMLFile(string $filename = 'signed_invoice.xml', ?string $outputDir = 'output'): self
     {
+        $previousBasePath = (new Storage())->path('');
         (new Storage($outputDir))->put($filename, $this->signedInvoice);
+        Storage::setBasePath($previousBasePath);
         return $this;
     }
 

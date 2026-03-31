@@ -216,10 +216,6 @@ try {
     );
 
     $prodOutputFile = __DIR__ . '/output/production_credentials.json';
-
-    // Reset storage base path (may have been set by GeneratorInvoice)
-    \Saleh7\Zatca\Storage::setBasePath('');
-
     $api->saveToJson(
         $prodResult->getCertificate(),
         $prodResult->getSecret(),

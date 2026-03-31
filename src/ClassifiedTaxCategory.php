@@ -41,7 +41,14 @@ class ClassifiedTaxCategory implements XmlSerializable
     /**
      * Get the tax category identifier.
      *
-     * If not set, it is derived from the percent value.
+     * If set explicitly, returns the explicit value (supports S, Z, E, O).
+     * Otherwise, auto-derives from percent:
+     *   - percent > 0  → 'S' (Standard rated)
+     *   - percent == 0 → 'Z' (Zero rated)
+     *
+     * For Exempt (E) or Outside Scope (O), set the ID explicitly via setId().
+     *
+     * ZATCA allowed values: S, Z, E, O (per UN/ECE 5305 / ZATCA Schematron rules).
      *
      * @return string|null
      */
@@ -52,13 +59,7 @@ class ClassifiedTaxCategory implements XmlSerializable
         }
 
         if ($this->getPercent() !== null) {
-            if ($this->getPercent() >= 15) {
-                return 'S';
-            } elseif ($this->getPercent() >= 6 && $this->getPercent() < 15) {
-                return 'AA';
-            } else {
-                return 'Z';
-            }
+            return $this->getPercent() > 0 ? 'S' : 'Z';
         }
 
         return null;

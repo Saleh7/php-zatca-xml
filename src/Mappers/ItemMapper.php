@@ -31,20 +31,22 @@ class ItemMapper
      */
     public function map(array $data): Item
     {
-        // Map classified tax category for the item.
-        // if percent 15 or more, ID is S (Standard rate)
-        // if percent 6 to 14.99, ID is AA (Reduced rate)
-        // if percent less than 6, ID is Z (Zero rate)
         $classifiedTax = [];
         if (isset($data['classifiedTaxCategory']) && is_array($data['classifiedTaxCategory'])) {
             foreach ($data['classifiedTaxCategory'] as $tax) {
-                // Map TaxScheme for the item.
                 $taxScheme = (new TaxScheme())
-                ->setId($tax['taxScheme']['id'] ?? "VAT");
-                // Create and add a new ClassifiedTaxCategory object to the array.
-                $classifiedTax[] = (new ClassifiedTaxCategory())
+                    ->setId($tax['taxScheme']['id'] ?? 'VAT');
+
+                $taxCategory = (new ClassifiedTaxCategory())
                     ->setPercent($tax['percent'] ?? 15)
                     ->setTaxScheme($taxScheme);
+
+                // Allow explicit ZATCA VAT category code (S, Z, E, O)
+                if (isset($tax['id'])) {
+                    $taxCategory->setId($tax['id']);
+                }
+
+                $classifiedTax[] = $taxCategory;
             }
         }
         // Create and return the Item object with mapped data.

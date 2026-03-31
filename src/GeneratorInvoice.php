@@ -81,7 +81,9 @@ class GeneratorInvoice
      */
     public function saveXMLFile(string $filename = 'unsigned_invoice.xml', ?string $outputDir = 'output'): self
     {
+        $previousBasePath = (new Storage())->path('');
         (new Storage($outputDir))->put($filename, $this->generatedXml);
+        Storage::setBasePath($previousBasePath);
         return $this;
     }
 

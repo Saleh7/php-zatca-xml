@@ -115,6 +115,8 @@ class InvoiceMapper
                 ->setAccountingCustomerParty(
                     $this->customerMapper->map($data['customer'] ?? [])
                 )
+                // Note: for simplified invoices without customer data,
+                // CustomerMapper returns an empty Party which renders as <AccountingCustomerParty><Party/></AccountingCustomerParty>
                 ->setDelivery($this->mapDelivery($data['delivery'] ?? []))
                 ->setPaymentMeans($this->paymentMeansMapper->map($data['paymentMeans'] ?? []))
                 ->setAllowanceCharges($this->mapAllowanceCharge($data ?? []))
@@ -232,12 +234,19 @@ class InvoiceMapper
             // Check if taxCategories is an array and iterate over it.
             if (isset($allowanceCharge['taxCategories']) && is_array($allowanceCharge['taxCategories'])) {
                 foreach ($allowanceCharge['taxCategories'] as $taxCatData) {
-                    $taxCategories[] = (new \Saleh7\Zatca\TaxCategory())
+                    $taxCategory = (new \Saleh7\Zatca\TaxCategory())
                         ->setPercent($taxCatData['percent'] ?? 15)
                         ->setTaxScheme(
                             (new \Saleh7\Zatca\TaxScheme())
-                                ->setId($taxCatData['taxScheme']['id'] ?? "VAT")
+                                ->setId($taxCatData['taxScheme']['id'] ?? 'VAT')
                         );
+
+                    // Allow explicit ZATCA VAT category code (S, Z, E, O)
+                    if (isset($taxCatData['id'])) {
+                        $taxCategory->setId($taxCatData['id']);
+                    }
+
+                    $taxCategories[] = $taxCategory;
                 }
             }
             
@@ -289,7 +298,9 @@ class InvoiceMapper
                     ->setId($taxSchemeData['id'] ?? "VAT");
                 
                 // Build the TaxCategory object using the extracted data.
+                // Supports explicit ZATCA VAT category code (S, Z, E, O)
                 $taxCategory = (new \Saleh7\Zatca\TaxCategory())
+                    ->setId($taxCategoryData['id'] ?? null)
                     ->setPercent($percent)
                     ->setTaxExemptionReasonCode($reasonCode)
                     ->setTaxExemptionReason($reason)

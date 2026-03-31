@@ -614,9 +614,7 @@ class Invoice implements XmlSerializable
         if ($this->accountingSupplierParty === null) {
             throw new InvalidArgumentException('Missing invoice accountingSupplierParty.');
         }
-        if ($this->accountingCustomerParty === null) {
-            throw new InvalidArgumentException('Missing invoice accountingCustomerParty.');
-        }
+        // accountingCustomerParty is optional for simplified (B2C) invoices
         if ($this->additionalDocumentReferences === null) {
             throw new InvalidArgumentException('Missing invoice additionalDocumentReferences.');
         }

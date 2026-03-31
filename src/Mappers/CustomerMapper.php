@@ -50,24 +50,31 @@ class CustomerMapper
             ->setRegistrationName($data['registrationName'] ?? '');
 
         // Map the PartyTaxScheme for the customer.
+        // taxId is optional for simplified invoices (B2C individual buyers).
         $partyTaxScheme = (new PartyTaxScheme())
-            ->setTaxScheme($taxScheme)
-            ->setCompanyId($data['taxId'] ?? '');
+            ->setTaxScheme($taxScheme);
 
-        // Map the Address for the customer.
-        $address = (new Address())
-            ->setStreetName($data['address']['street'] ?? '')
-            ->setBuildingNumber($data['address']['buildingNumber'] ?? '')
-            ->setCitySubdivisionName($data['address']['subdivision'] ?? '')
-            ->setCityName($data['address']['city'] ?? '')
-            ->setPostalZone($data['address']['postalZone'] ?? '')
-            ->setCountry($data['address']['country'] ?? 'SA');
+        if (!empty($data['taxId'])) {
+            $partyTaxScheme->setCompanyId($data['taxId']);
+        }
 
         // Create and populate the Party object.
         $party = (new Party())
             ->setLegalEntity($legalEntity)
-            ->setPartyTaxScheme($partyTaxScheme)
-            ->setPostalAddress($address);
+            ->setPartyTaxScheme($partyTaxScheme);
+
+        // Map the Address only if provided (optional for simplified B2C invoices).
+        if (!empty($data['address'])) {
+            $address = (new Address())
+                ->setStreetName($data['address']['street'] ?? '')
+                ->setBuildingNumber($data['address']['buildingNumber'] ?? '')
+                ->setCitySubdivisionName($data['address']['subdivision'] ?? '')
+                ->setCityName($data['address']['city'] ?? '')
+                ->setPostalZone($data['address']['postalZone'] ?? '')
+                ->setCountry($data['address']['country'] ?? 'SA');
+
+            $party->setPostalAddress($address);
+        }
 
         // Set party identification if available.
         if (isset($data['identificationId'])) {
