@@ -659,7 +659,7 @@ class Invoice implements XmlSerializable
         }
         // IssueTime
         if ($this->issueTime !== null) {
-            $writer->write([Schema::CBC . 'IssueTime' => $this->issueTime->format('H:i:s')]);
+            $writer->write([Schema::CBC . 'IssueTime' => $this->issueTime->format('H:i:s\Z')]);
         }
         // InvoiceType
         if ($this->invoiceType !== null) {

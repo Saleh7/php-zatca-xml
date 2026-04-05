@@ -2,6 +2,7 @@
 namespace Saleh7\Zatca\Mappers;
 
 use DateTime;
+use DateTimeZone;
 use Saleh7\Zatca\{
     Invoice, UBLExtensions, Signature, InvoiceType, TaxTotal, LegalMonetaryTotal, Delivery, AllowanceCharge, BillingReference
 };
@@ -344,13 +345,21 @@ class InvoiceMapper
      */
     private function mapDateTime(?string $dateTimeStr): DateTime
     {
+        // target timezone: UTC
+        $utc = new DateTimeZone('UTC');
+
         if (empty($dateTimeStr)) {
-            return new DateTime();
+            return new DateTime('now', $utc);
         }
+
         try {
-            return new DateTime($dateTimeStr);
+            $dt = new DateTime($dateTimeStr);
+            $dt->setTimezone($utc);
+
+            return $dt;
         } catch (\Exception $e) {
-            return new DateTime();
+            // On error, return current UTC date/time
+            return new DateTime('now', $utc);
         }
     }
 }
