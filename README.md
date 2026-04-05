@@ -278,8 +278,8 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## Contributors
 
-<img src="https://github.com/sevaske.png" width="60px;"/><br /><sub><a href="https://github.com/sevaske">sevaske</a></sub>
-
+<a href="https://github.com/sevaske"><img src="https://github.com/sevaske.png" width="60px;"/></a>
+<a href="https://github.com/habibalkhabbaz"><img src="https://github.com/habibalkhabbaz.png" width="60px;"/></a>
 ## License
 
 [MIT License](https://github.com/Saleh7/php-zatca-xml/blob/main/LICENSE)
